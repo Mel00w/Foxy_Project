@@ -1,0 +1,74 @@
+{% if conversation %}
+    <div class="chat-header">
+        <div class="chat-header-avatar">
+            <i class="fa-solid fa-users"></i>
+        </div>
+        <div class="chat-header-info">
+            <h3>
+                {% if is_granted('ROLE_PARENT') %}
+                    Conversation avec l'équipe
+                {% else %}
+                    {{ conversation.parent.name }} {{ conversation.parent.lastname }}
+                {% endif %}
+            </h3>
+            <small>
+                {% if is_granted('ROLE_PARENT') %}
+                    Tous les éducateurs et l'administrateur
+                {% else %}
+                    Parent
+                {% endif %}
+            </small>
+        </div>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+        {% for message in messages %}
+            <div class="message {% if message.sender.id == app.user.id %}sent{% else %}received{% endif %}"
+                 data-message-id="{{ message.id }}">
+                <div class="message-header">
+                    {{ message.sender.name }} {{ message.sender.lastname }}
+                    {% if message.sender.id == app.user.id %}
+                        (Vous)
+                    {% endif %}
+                </div>
+                <div class="message-content">{{ message.content }}</div>
+                <div class="message-time">
+                    {{ message.createdAt|date('d/m/Y H:i') }}
+                    {% if message.sender.id != app.user.id and not message.isRead %}
+                        <span class="unread-badge"></span>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="chat-input">
+        <input type="text" id="message-input" placeholder="Écrivez votre message...">
+        <button id="send-button">
+            <i class="fa-solid fa-paper-plane"></i>
+            Envoyer
+        </button>
+        {% if is_granted('ROLE_PARENT') %}
+            <button id="absence-button" title="Signaler une absence">
+                <i class="fa-solid fa-calendar-times"></i>
+            </button>
+            <button id="delay-button" title="Signaler un retard">
+                <i class="fa-solid fa-clock"></i>
+            </button>
+            <button id="extra-hours-button" title="Demander des heures supplémentaires">
+                <i class="fa-solid fa-calendar-plus"></i>
+            </button>
+        {% endif %}
+        {% if is_granted('ROLE_PARENT') or is_granted('ROLE_ADMIN') %}
+            <button id="attachment-button" title="Joindre un fichier">
+                <i class="fa-solid fa-paperclip"></i>
+            </button>
+        {% endif %}
+    </div>
+{% else %}
+    <div class="no-conversation">
+        <i class="fa-regular fa-comments"></i>
+        <p>Conversation non trouvée</p>
+        <small>Veuillez sélectionner une autre conversation</small>
+    </div>
+{% endif %} 

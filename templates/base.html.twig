@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{{ asset('img/foxy.ico') }}">
+    {% block fontawesome %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    {% endblock %}
+    <title>{% block title %}Mon site Symfony{% endblock %}</title>
+    {% block stylesheets %}
+        {{ encore_entry_link_tags('app') }}
+    {% endblock %}
+    {% block javascripts %}
+        {{ encore_entry_script_tags('app') }}
+    {% endblock %}
+</head>
+<body {% block idbody %}{% endblock %} data-turbo-suppress-warning>
+    <header {% block idheader %}{% endblock %}>
+        <div class="header-container">
+            <!-- Menu de navigation - seulement si connecté -->
+            {% if app.user %}
+            <div class="nav-menu">
+                <!-- Bouton desktop -->
+                <button class="nav-toggle" id="navToggle" data-action="click->nav#toggle" title="Menu de navigation">
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                </button>
+                
+                <!-- Bouton mobile -->
+                <button class="burger-menu" id="burgerMenu" data-action="click->nav#toggle" title="Menu de navigation">
+                    <div class="burger-line"></div>
+                    <div class="burger-line"></div>
+                    <div class="burger-line"></div>
+                </button>
+
+                <!-- Menu déroulant -->
+                <div class="nav-dropdown" id="navDropdown">
+                    <a href="{{ path('home') }}" class="nav-item" data-action="click->nav#close">
+                        <i class="fa-solid fa-home" style="color: #1877f2;"></i>
+                        <span>Accueil</span>
+                    </a>
+                    <a href="{{ path('app_documents_index') }}" class="nav-item" data-action="click->nav#close">
+                        <i class="fa-regular fa-folder" style="color: rgb(184, 230, 193);"></i>
+                        <span>Documents</span>
+                    </a>
+                    <a href="{{ path('app_messages_index') }}" class="nav-item" data-action="click->nav#close">
+                        <i class="fa-regular fa-message" style="color: rgb(244, 179, 165);"></i>
+                        <span>Messages</span>
+                    </a>
+                    <a href="{{ path('app_planning') }}" class="nav-item" data-action="click->nav#close">
+                        <i class="fa-regular fa-calendar" style="color: rgb(236, 163, 108);"></i>
+                        <span>Planning</span>
+                    </a>
+                    <a href="{{ path('app_contact') }}" class="nav-item" data-action="click->nav#close">
+                        <i class="fa-solid fa-signs-post" style="color: rgb(168, 215, 230);"></i>
+                        <span>Contact</span>
+                    </a>
+                    <a href="{{ path('app_children_index') }}" class="nav-item" data-action="click->nav#close">
+                        <i class="fa-solid fa-children" style="color: rgb(255, 234, 142);"></i>
+                        <span>Famille</span>
+                    </a>
+                    <a href="{{ path('app_logout') }}" class="nav-item" data-action="click->nav#close">
+                        <i class="fa-solid fa-right-from-bracket" style="color: #f44336;"></i>
+                        <span>Déconnexion</span>
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <!-- Espace vide si non connecté pour maintenir le centrage du logo -->
+            <div></div>
+            {% endif %}
+
+            <!-- Logo centré -->
+            <h1 class="logo-title"><a href="{{ path('home') }}" class="logo-link">Foxy</a></h1>
+
+            <!-- Boutons d'authentification (seulement pour la connexion) -->
+            {% block auth_buttons %}
+            <div class="auth-buttons">
+                {% if not app.user %}
+                    <a href="{{ path('app_login') }}" class="auth-button" style="--bg:#4CAF50">
+                        <i class="fa-solid fa-right-to-bracket"></i> Connexion
+                    </a>
+                {% endif %}
+            </div>
+            {% endblock %}
+        </div>
+        {% block imgheader %}{% endblock %}
+    </header>
+
+    <!-- Overlay pour fermer le menu -->
+    <div class="nav-overlay" id="navOverlay"></div>
+
+    <main {% block idmain %}{% endblock %}>
+        {% block body %}{% endblock %}
+    </main>
+    <footer>
+    </footer>
+
+    <script>
+        // Gestion du menu de navigation - Version simplifiée et robuste
+        (function() {
+            let isInitialized = false;
+            
+            function initMenu() {
+                if (isInitialized) return;
+                
+                console.log('Initialisation du menu...');
+                
+                // Attacher les événements directement aux éléments
+                attachMenuEvents();
+                
+                isInitialized = true;
+                console.log('Menu initialisé avec succès');
+            }
+            
+            function attachMenuEvents() {
+                // Bouton desktop
+                const navToggle = document.getElementById('navToggle');
+                if (navToggle) {
+                    navToggle.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Clic sur navToggle');
+                        toggleMenu();
+                    };
+                }
+                
+                // Bouton mobile
+                const burgerMenu = document.getElementById('burgerMenu');
+                if (burgerMenu) {
+                    burgerMenu.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Clic sur burgerMenu');
+                        toggleMenu();
+                    };
+                }
+                
+                // Overlay
+                const navOverlay = document.getElementById('navOverlay');
+                if (navOverlay) {
+                    navOverlay.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Clic sur overlay');
+                        closeMenu();
+                    };
+                }
+                
+                // Liens du menu
+                const navItems = document.querySelectorAll('.nav-item');
+                navItems.forEach(function(item) {
+                    item.onclick = function(e) {
+                        console.log('Clic sur nav-item');
+                        closeMenu();
+                    };
+                });
+                
+                // Touche Escape
+                document.onkeydown = function(e) {
+                    if (e.key === 'Escape') {
+                        console.log('Touche Escape');
+                        closeMenu();
+                    }
+                };
+                
+                // Redimensionnement
+                window.onresize = function() {
+                    if (window.innerWidth > 768) {
+                        closeMenu();
+                    }
+                };
+            }
+            
+            function toggleMenu() {
+                console.log('Toggle menu');
+                const navDropdown = document.getElementById('navDropdown');
+                const burgerMenu = document.getElementById('burgerMenu');
+                const navOverlay = document.getElementById('navOverlay');
+                
+                if (navDropdown) {
+                    navDropdown.classList.toggle('active');
+                    console.log('Dropdown toggled:', navDropdown.classList.contains('active'));
+                }
+                
+                if (burgerMenu) {
+                    burgerMenu.classList.toggle('active');
+                }
+                
+                if (navOverlay) {
+                    navOverlay.classList.toggle('active');
+                }
+            }
+            
+            function closeMenu() {
+                console.log('Close menu');
+                const navDropdown = document.getElementById('navDropdown');
+                const burgerMenu = document.getElementById('burgerMenu');
+                const navOverlay = document.getElementById('navOverlay');
+                
+                if (navDropdown) navDropdown.classList.remove('active');
+                if (burgerMenu) burgerMenu.classList.remove('active');
+                if (navOverlay) navOverlay.classList.remove('active');
+            }
+            
+            // Initialisation multiple pour s'assurer que ça fonctionne
+            function forceInit() {
+                isInitialized = false;
+                initMenu();
+            }
+            
+            // Événements d'initialisation
+            document.addEventListener('DOMContentLoaded', forceInit);
+            document.addEventListener('turbo:render', forceInit);
+            document.addEventListener('turbo:load', forceInit);
+            window.addEventListener('load', forceInit);
+            
+            // Réinitialisation forcée après un délai
+            setTimeout(forceInit, 100);
+            setTimeout(forceInit, 500);
+            setTimeout(forceInit, 1000);
+            
+            // Vérification périodique
+            setInterval(function() {
+                const navToggle = document.getElementById('navToggle');
+                const burgerMenu = document.getElementById('burgerMenu');
+                if ((navToggle || burgerMenu) && !isInitialized) {
+                    console.log('Réinitialisation périodique détectée');
+                    forceInit();
+                }
+            }, 2000);
+            
+            // Exposer les fonctions globalement pour le débogage
+            window.navMenu = {
+                init: forceInit,
+                toggle: toggleMenu,
+                close: closeMenu
+            };
+            
+        })();
+    </script>
+</body>
+</html>

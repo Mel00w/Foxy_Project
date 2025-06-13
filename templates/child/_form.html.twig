@@ -1,0 +1,250 @@
+{{ form_start(form, {'attr': {'class': 'child-form'}}) }}
+    <div class="form-section">
+        <h3>Informations de l'enfant</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                {{ form_label(form.name) }}
+                {{ form_widget(form.name) }}
+            </div>
+            <div class="form-group">
+                {{ form_label(form.lastname) }}
+                {{ form_widget(form.lastname) }}
+            </div>
+            <div class="form-group">
+                {{ form_label(form.birthday) }}
+                {{ form_widget(form.birthday) }}
+            </div>
+            <div class="form-group">
+                {{ form_label(form.signing_date) }}
+                {{ form_widget(form.signing_date) }}
+            </div>
+            <div class="form-group">
+                {{ form_label(form.team) }}
+                {{ form_widget(form.team) }}
+            </div>
+            <div class="form-group">
+                {{ form_label(form.picture) }}
+                {{ form_widget(form.picture) }}
+                {% if app.request.attributes.get('_route') == 'app_children_edit' and child.picture %}
+                    <div class="current-picture">
+                        <img src="{{ asset(child.picture) }}" alt="Photo actuelle" style="max-width: 200px; margin-top: 10px;">
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group full-width">
+                {{ form_label(form.allergy) }}
+                {{ form_widget(form.allergy) }}
+            </div>
+            <div class="form-group full-width">
+                {{ form_label(form.health_condition) }}
+                {{ form_widget(form.health_condition) }}
+            </div>
+        </div>
+    </div>
+
+    <div class="parents-section">
+        <div class="parent-column">
+            <h3>Parent 1</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    {{ form_label(form.parent1_name) }}
+                    {{ form_widget(form.parent1_name) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent1_lastname) }}
+                    {{ form_widget(form.parent1_lastname) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent1_email) }}
+                    {{ form_widget(form.parent1_email) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent1_password) }}
+                    {{ form_widget(form.parent1_password) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent1_birthday) }}
+                    {{ form_widget(form.parent1_birthday) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent1_phone) }}
+                    {{ form_widget(form.parent1_phone) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent1_lien) }}
+                    {{ form_widget(form.parent1_lien) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent1_adress) }}
+                    {{ form_widget(form.parent1_adress) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent1_income) }}
+                    {{ form_widget(form.parent1_income) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="parent-column">
+            <h3>Parent 2</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    {{ form_label(form.parent2_name) }}
+                    {{ form_widget(form.parent2_name) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent2_lastname) }}
+                    {{ form_widget(form.parent2_lastname) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent2_email) }}
+                    {{ form_widget(form.parent2_email) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent2_password) }}
+                    {{ form_widget(form.parent2_password) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent2_birthday) }}
+                    {{ form_widget(form.parent2_birthday) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent2_phone) }}
+                    {{ form_widget(form.parent2_phone) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent2_lien) }}
+                    {{ form_widget(form.parent2_lien) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent2_adress) }}
+                    {{ form_widget(form.parent2_adress) }}
+                </div>
+                <div class="form-group">
+                    {{ form_label(form.parent2_income) }}
+                    {{ form_widget(form.parent2_income) }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+        <a href="{{ path('app_children_index') }}" class="btn btn-secondary">Annuler</a>
+    </div>
+{{ form_end(form) }}
+
+<style>
+.child-form {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-section, .parents-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.parents-section {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.parent-column {
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #eee;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group textarea {
+    min-height: 100px;
+}
+
+h3 {
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #f44336;
+    color: white;
+}
+
+.current-picture {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>

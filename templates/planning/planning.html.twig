@@ -1,0 +1,1018 @@
+{% extends 'base.html.twig' %}
+
+{% block idheader %}id="planning-header"{% endblock %}
+{% block title %}Planning | Foxy{% endblock %}
+{% block imgheader %}
+    <img src="{{ asset('img/foxy_all.webp') }}" alt="Header Image">
+{% endblock %}
+{% block idmain %}id="planning-main"{% endblock %}
+
+{% block body %}
+    {% if 'ROLE_ADMIN' in app.user.roles %}
+        <div>
+            <h2>Planning Admin</h2>
+        </div>
+        <div id="button-plan-admin">
+            <button class="plan-button active" data-view="enfant" style="--bg:#ECA36C">Enfant</button>
+            <button class="plan-button" data-view="equipe" style="--bg:#ECA36C">Equipe</button>
+        </div>
+
+        <div id="planning-content" class="view-enfant">
+            <div id="week-selector">
+                <a href="{{ path('app_planning', {'week': year ~ '-W' ~ (week-1), 'selectedDay': selectedDay}) }}#planning-grid">&lt;</a>
+                <span>Semaine {{ week }}</span>
+                <a href="{{ path('app_planning', {'week': year ~ '-W' ~ (week+1), 'selectedDay': selectedDay}) }}#planning-grid">&gt;</a>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:1rem;margin:1rem 0;">
+                <div id="days-buttons" style="flex:1;">
+                    {% for day in weekDays %}
+                        <a href="{{ path('app_planning', {'week': year ~ '-W' ~ week, 'selectedDay': day.date}) }}#planning-grid">
+                            <button class="{{ day.date == selectedDay ? 'active-day' : '' }}">
+                                {{ day.name|capitalize }}<br>{{ day.display }}
+                            </button>
+                        </a>
+                    {% endfor %}
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button id="add-child-week-btn" style="--bg:#4CAF50;padding:0.5rem 1rem;height:fit-content;font-size:0.9em;" title="Ajouter un enfant pour la semaine">
+                        <i class="fa-solid fa-child"></i> Ajouter
+                    </button>
+                    <button id="view-child-daily-btn" style="--bg:#9C27B0;padding:0.5rem 1rem;height:fit-content;font-size:0.9em;" title="Voir le planning journalier">
+                        <i class="fa-solid fa-calendar-day"></i> Journalier
+                    </button>
+                    <a href="{{ path('app_children_new') }}" style="text-decoration:none;">
+                        <button style="--bg:#2196F3;padding:0.5rem 1rem;height:fit-content;font-size:0.9em;" title="Créer un nouvel enfant">
+                            <i class="fa-solid fa-plus"></i> Nouveau
+                        </button>
+                    </a>
+                    <button id="delete-children-btn" style="--bg:#f44336;padding:0.5rem 1rem;height:fit-content;font-size:0.9em;" title="Supprimer des enfants">
+                        <i class="fa-solid fa-trash"></i> Supprimer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grille horaire de 7h à 19h -->
+            <div id="hours-grid" style="display:flex;gap:2px;margin:1rem 0 1rem 160px;">
+                {% for h in 7..19 %}
+                    <div style="flex:1;text-align:center;font-size:0.9em;color:#888;">{{ '%02d'|format(h) }}h</div>
+                {% endfor %}
+            </div>
+
+            <!-- Grille des enfants pour le jour sélectionné -->
+            <section id="planning-grid">
+                {% for enfant in enfants %}
+                    <div class="enfant-row" style="display:flex;align-items:center;">
+                        <div class="info" style="width:150px;">
+                            {% if enfant.picture %}
+                                <img src="{{ asset('uploads/children/' ~ enfant.picture) }}" alt="Avatar {{ enfant.name }} {{ enfant.lastname }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                            {% else %}
+                                <img src="{{ asset('img/avatar-placeholder.png') }}" alt="Avatar {{ enfant.name }} {{ enfant.lastname }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                            {% endif %}
+                            <span>{{ enfant.name }} {{ enfant.lastname }}</span>
+                            {% set jour = enfant.jours|filter(j => j.date == selectedDay)|first %}
+                            <div class="action-buttons">
+                                <button class="add-hours-btn"
+                                        data-enfant-id="{{ enfant.id }}"
+                                        data-date="{{ selectedDay }}"
+                                        data-start="{{ jour.start|default('') }}"
+                                        data-end="{{ jour.end|default('') }}"
+                                        title="Ajouter ou modifier des heures">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="horaire-bar" style="flex:1;position:relative;height:32px;background:#f3f3f3;border-radius:8px;overflow:hidden;">
+                            {% if jour and jour.present %}
+                                {% set startHour = jour.start ? (jour.start|split(':')[0]) + (jour.start|split(':')[1] / 60) : 7 %}
+                                {% set endHour = jour.end ? (jour.end|split(':')[0]) + (jour.end|split(':')[1] / 60) : 7 %}
+                                {% set minHour = 7 %}
+                                {% set maxHour = 19 %}
+                                {% set total = maxHour - minHour %}
+                                {% set left = ((startHour - minHour) / total * 100) %}
+                                {% if left < 0 %}{% set left = 0 %}{% endif %}
+                                {% if left > 100 %}{% set left = 100 %}{% endif %}
+                                {% set width = ((endHour - startHour) / total * 100) %}
+                                {% if width < 0 %}{% set width = 0 %}{% endif %}
+                                {% if width > (100 - left) %}{% set width = 100 - left %}{% endif %}
+                                <div style="position:absolute;left:{{ left }}%;width:{{ width }}%;height:100%;background:#4caf50;opacity:0.8;border-radius:8px;"></div>
+                                <div style="position:absolute;left:{{ left }}%;top:0;width:{{ width }}%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;">
+                                    {{ jour.start }} - {{ jour.end }}
+                                </div>
+                            {% else %}
+                                <span style="color:#aaa;position:absolute;left:10px;top:6px;">Absent</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </section>
+        </div>
+
+        <!-- Contenu pour les autres vues (initialement caché) -->
+        <div id="equipe-content" class="view-content">
+            <div id="week-selector-equipe">
+                <a href="{{ path('app_planning', {'week': year ~ '-W' ~ (week-1), 'selectedDay': selectedDay, 'view': 'equipe'}) }}#planning-grid-equipe">&lt;</a>
+                <span>Semaine {{ week }}</span>
+                <a href="{{ path('app_planning', {'week': year ~ '-W' ~ (week+1), 'selectedDay': selectedDay, 'view': 'equipe'}) }}#planning-grid-equipe">&gt;</a>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:1rem;margin:1rem 0;">
+                <div id="days-buttons-equipe" style="flex:1;">
+                    {% for day in weekDays %}
+                        <a href="{{ path('app_planning', {'week': year ~ '-W' ~ week, 'selectedDay': day.date, 'view': 'equipe'}) }}#planning-grid-equipe">
+                            <button class="{{ day.date == selectedDay ? 'active-day' : '' }}">
+                                {{ day.name|capitalize }}<br>{{ day.display }}
+                            </button>
+                        </a>
+                    {% endfor %}
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button id="add-shift-week-btn" style="--bg:#4CAF50;padding:0.5rem 1rem;height:fit-content;font-size:0.9em;" title="Ajouter des horaires pour la semaine">
+                        <i class="fa-solid fa-user-plus"></i> Ajouter
+                    </button>
+                    <button id="view-equipe-daily-btn" style="--bg:#9C27B0;padding:0.5rem 1rem;height:fit-content;font-size:0.9em;" title="Voir le planning journalier">
+                        <i class="fa-solid fa-calendar-day"></i> Journalier
+                    </button>
+                    <a href="{{ path('app_user_new') }}" style="text-decoration:none;">
+                        <button style="--bg:#2196F3;padding:0.5rem 1rem;height:fit-content;font-size:0.9em;" title="Créer un nouvel éducateur">
+                            <i class="fa-solid fa-plus"></i> Nouveau
+                        </button>
+                    </a>
+                    <button id="delete-educators-btn" style="--bg:#f44336;padding:0.5rem 1rem;height:fit-content;font-size:0.9em;" title="Supprimer des éducateurs">
+                        <i class="fa-solid fa-trash"></i> Supprimer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grille horaire de 7h à 19h -->
+            <div id="hours-grid-equipe" style="display:flex;gap:2px;margin:1rem 0 1rem 160px;">
+                {% for h in 7..19 %}
+                    <div style="flex:1;text-align:center;font-size:0.9em;color:#888;">{{ '%02d'|format(h) }}h</div>
+                {% endfor %}
+            </div>
+
+            <!-- Grille des éducateurs pour le jour sélectionné -->
+            <section id="planning-grid-equipe">
+                {% for educateur in educateursData %}
+                    {% set currentShift = null %}
+                    {% for shift_item in educateur.shifts %}
+                        {% if shift_item.date|date('Y-m-d') == selectedDay and currentShift == null %}
+                            {% set currentShift = shift_item %}
+                        {% endif %}
+                    {% endfor %}
+                    <div class="educateur-row" style="display:flex;align-items:center;">
+                        <div class="info" style="width:150px;">
+                            <img src="{{ asset(educateur.picture ?: 'img/avatar-placeholder.png') }}" alt="Avatar {{ educateur.nom }}">
+                            <span>{{ educateur.nom }} {{ educateur.prenom }}</span>
+                            <div class="action-buttons">
+                                <button class="add-shift-btn"
+                                        data-educateur-id="{{ educateur.id }}"
+                                        data-date="{{ selectedDay }}"
+                                        data-start="{{ currentShift ? currentShift.startTime|date('H:i') : '' }}"
+                                        data-end="{{ currentShift ? currentShift.endTime|date('H:i') : '' }}"
+                                        title="Ajouter ou modifier des heures">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="horaire-bar" style="flex:1;position:relative;height:32px;background:#f3f3f3;border-radius:8px;overflow:hidden;">
+                            {% if currentShift %}
+                                {% set startHour = currentShift.startTime ? (currentShift.startTime|date('H')) + (currentShift.startTime|date('i') / 60) : 7 %}
+                                {% set endHour = currentShift.endTime ? (currentShift.endTime|date('H')) + (currentShift.endTime|date('i') / 60) : 7 %}
+                                {% set minHour = 7 %}
+                                {% set maxHour = 19 %}
+                                {% set total = maxHour - minHour %}
+                                {% set left = ((startHour - minHour) / total * 100) %}
+                                {% if left < 0 %}{% set left = 0 %}{% endif %}
+                                {% if left > 100 %}{% set left = 100 %}{% endif %}
+                                {% set width = ((endHour - startHour) / total * 100) %}
+                                {% if width < 0 %}{% set width = 0 %}{% endif %}
+                                {% if width > (100 - left) %}{% set width = 100 - left %}{% endif %}
+                                <div style="position:absolute;left:{{ left }}%;width:{{ width }}%;height:100%;background:#ECA36C;opacity:0.8;border-radius:8px;"></div>
+                                <div style="position:absolute;left:{{ left }}%;top:0;width:{{ width }}%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;">
+                                    {{ currentShift.startTime|date('H:i') }} - {{ currentShift.endTime|date('H:i') }}
+                                </div>
+                            {% else %}
+                                <span style="color:#aaa;position:absolute;left:10px;top:6px;">Non programmé</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </section>
+
+            <!-- Modal pour ajouter/modifier des horaires d'éducateur -->
+            <div id="add-shift-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; z-index:1000;">
+                <form id="add-shift-form" method="post" action="{{ path('app_planning_add_shift') }}" style="background:#fff; padding:2rem; border-radius:10px; min-width:300px;">
+                    <h3>Ajouter ou modifier des horaires</h3>
+                    <input type="hidden" name="educateur_id" id="modal-educateur-id">
+                    <input type="hidden" name="date" id="modal-shift-date">
+                    <input type="hidden" name="view" value="equipe">
+                    <label>Heure de début :
+                        <input type="time" name="start_time" id="modal-shift-start-time" required>
+                    </label>
+                    <label>Heure de fin :
+                        <input type="time" name="end_time" id="modal-shift-end-time" required>
+                    </label>
+                    <div style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
+                        <button type="submit" style="background:#4CAF50;color:#fff;">Enregistrer</button>
+                        <button type="button" id="close-shift-modal" style="background:#f44336;color:#fff;">Annuler</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Modal pour ajouter des horaires hebdomadaires -->
+            <div id="add-shift-week-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.3); z-index:1000; overflow-y:auto;">
+                <div style="min-height:100%; display:flex; align-items:center; justify-content:center; padding:2rem;">
+                    <form id="add-shift-week-form" method="post" action="{{ path('app_planning_add_shift_week') }}" style="background:#fff; padding:2rem; border-radius:10px; width:100%; max-width:600px; margin:auto; position:relative;">
+                        <h3 style="margin-top:0;">Ajouter des horaires pour la semaine</h3>
+                        <input type="hidden" name="view" value="equipe">
+                        <div style="margin-bottom:1rem;">
+                            <label>Éducateur :
+                                <select name="educateur_id" required style="width:100%;padding:0.5rem;">
+                                    <option value="">Sélectionner un éducateur</option>
+                                    {% for educateur in educateurs %}
+                                        <option value="{{ educateur.id }}">{{ educateur.lastname }} {{ educateur.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                        </div>
+                        
+                        <div style="max-height:60vh; overflow-y:auto; padding-right:0.5rem;">
+                            {% for day in weekDays %}
+                                <div style="margin-bottom:1rem;padding:1rem;border:1px solid #eee;border-radius:5px;">
+                                    <h4 style="margin-top:0;">{{ day.name|capitalize }} {{ day.display }}</h4>
+                                    {% set existingShift = null %}
+                                    {% for educateur in educateurs %}
+                                        {% for shift in educateur.shifts %}
+                                            {% if shift.date|date('Y-m-d') == day.date %}
+                                                {% set existingShift = shift %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                    <div style="display:flex;gap:1rem;align-items:center;">
+                                        <label>Heure de début :
+                                            <input type="time" name="start_time[{{ day.date }}]" value="{{ existingShift ? existingShift.startTime|date('H:i') : '' }}" required>
+                                        </label>
+                                        <label>Heure de fin :
+                                            <input type="time" name="end_time[{{ day.date }}]" value="{{ existingShift ? existingShift.endTime|date('H:i') : '' }}" required>
+                                        </label>
+                                    </div>
+                                    {% if existingShift %}
+                                        <div style="margin-top:0.5rem;font-size:0.9em;color:#666;">
+                                            Horaires existants : {{ existingShift.startTime|date('H:i') }} - {{ existingShift.endTime|date('H:i') }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;position:sticky;bottom:0;background:#fff;padding-top:1rem;border-top:1px solid #eee;">
+                            <button type="submit" style="background:#4CAF50;color:#fff;padding:0.5rem 1rem;border:none;border-radius:4px;cursor:pointer;">Enregistrer</button>
+                            <button type="button" id="close-shift-week-modal" style="background:#f44336;color:#fff;padding:0.5rem 1rem;border:none;border-radius:4px;cursor:pointer;">Annuler</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="semaine-content" class="view-content" style="display:none;">
+            <h3>Vue Semaine</h3>
+            <!-- Contenu de la vue semaine à implémenter -->
+        </div>
+
+        <div id="jour-content" class="view-content" style="display:none;">
+            <h3>Vue Jour</h3>
+            <!-- Contenu de la vue jour à implémenter -->
+        </div>
+
+        <!-- Modal pour ajouter/modifier des heures -->
+        <div id="add-hours-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; z-index:1000;">
+            <form id="add-hours-form" method="post" action="{{ path('app_planning_add_hours') }}" style="background:#fff; padding:2rem; border-radius:10px; min-width:300px;">
+                <h3>Ajouter ou modifier des heures</h3>
+                <input type="hidden" name="enfant_id" id="modal-enfant-id">
+                <input type="hidden" name="date" id="modal-date">
+                <input type="hidden" name="is_absent" id="modal-is-absent" value="0">
+                <input type="hidden" name="view" value="{{ view }}">
+                <label>Heure de début :
+                    <input type="time" name="start_time" id="modal-start-time" required>
+                </label>
+                <label>Heure de fin :
+                    <input type="time" name="end_time" id="modal-end-time" required>
+                </label>
+                <button type="submit">Enregistrer</button>
+                <button type="button" id="set-absent" style="background:#e57373;color:#fff;margin-left:10px;">Absent</button>
+                <button type="button" id="close-modal">Annuler</button>
+            </form>
+        </div>
+
+        <!-- Modal pour ajouter un enfant pour la semaine -->
+        <div id="add-child-week-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; z-index:1000;">
+            <form id="add-child-week-form" method="post" action="{{ path('app_planning_add_child_week') }}" style="background:#fff; padding:2rem; border-radius:10px; min-width:400px;">
+                <h3>Ajouter un enfant pour la semaine</h3>
+                <div style="margin-bottom:1rem;">
+                    <label>Enfant :
+                        <select name="enfant_id" required style="width:100%;padding:0.5rem;">
+                            <option value="">Sélectionner un enfant</option>
+                            {% for enfant in enfants %}
+                                <option value="{{ enfant.id }}">{{ enfant.name }} {{ enfant.lastname }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </div>
+                
+                {% for day in weekDays %}
+                    <div style="margin-bottom:1rem;padding:1rem;border:1px solid #eee;border-radius:5px;">
+                        <h4>{{ day.name|capitalize }} {{ day.display }}</h4>
+                        <div style="display:flex;gap:1rem;align-items:center;">
+                            <label>Heure de début :
+                                <input type="time" name="start_time[{{ day.date }}]" required>
+                            </label>
+                            <label>Heure de fin :
+                                <input type="time" name="end_time[{{ day.date }}]" required>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.5rem;">
+                                <input type="checkbox" name="absent[{{ day.date }}]" value="1">
+                                Absent
+                            </label>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <div style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
+                    <button type="submit" style="background:#4CAF50;color:#fff;">Enregistrer</button>
+                    <button type="button" id="close-child-week-modal" style="background:#f44336;color:#fff;">Annuler</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Modal pour supprimer des enfants -->
+        <div id="delete-children-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; z-index:1000;">
+            <div style="background:#fff; padding:2rem; border-radius:10px; min-width:400px;">
+                <h3>Supprimer des enfants</h3>
+                <form id="delete-children-form" method="post" action="{{ path('app_children_delete_multiple') }}">
+                    <div style="max-height:60vh; overflow-y:auto; margin:1rem 0;">
+                        {% for enfant in enfants %}
+                            <div style="display:flex; align-items:center; gap:1rem; padding:0.5rem; border-bottom:1px solid #eee;">
+                                <input type="checkbox" name="children[]" value="{{ enfant.id }}" id="child-{{ enfant.id }}">
+                                <label for="child-{{ enfant.id }}" style="flex:1; cursor:pointer;">
+                                    {{ enfant.name }} {{ enfant.lastname }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete_multiple_children') }}">
+                    <div style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
+                        <button type="submit" style="background:#f44336;color:#fff;padding:0.5rem 1rem;border:none;border-radius:4px;cursor:pointer;" onclick="return confirm('Êtes-vous sûr de vouloir supprimer les enfants sélectionnés ? Cette action est irréversible.');">
+                            Supprimer la sélection
+                        </button>
+                        <button type="button" id="close-delete-children-modal" style="background:#666;color:#fff;padding:0.5rem 1rem;border:none;border-radius:4px;cursor:pointer;">
+                            Annuler
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal pour supprimer des éducateurs -->
+        <div id="delete-educators-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; z-index:1000;">
+            <div style="background:#fff; padding:2rem; border-radius:10px; min-width:400px;">
+                <h3>Supprimer des éducateurs</h3>
+                <form id="delete-educators-form" method="post" action="{{ path('app_user_delete_multiple') }}">
+                    <div style="max-height:60vh; overflow-y:auto; margin:1rem 0;">
+                        {% for educateur in educateurs %}
+                            {% if 'ROLE_EDUCATOR' in educateur.roles %}
+                                <div style="display:flex; align-items:center; gap:1rem; padding:0.5rem; border-bottom:1px solid #eee;">
+                                    <input type="checkbox" name="educators[]" value="{{ educateur.id }}" id="educator-{{ educateur.id }}">
+                                    <label for="educator-{{ educateur.id }}" style="flex:1; cursor:pointer;">
+                                        {{ educateur.name }} {{ educateur.lastname }}
+                                    </label>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete_multiple_educators') }}">
+                    <div style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
+                        <button type="submit" style="background:#f44336;color:#fff;padding:0.5rem 1rem;border:none;border-radius:4px;cursor:pointer;">
+                            Supprimer la sélection
+                        </button>
+                        <button type="button" id="close-delete-educators-modal" style="background:#666;color:#fff;padding:0.5rem 1rem;border:none;border-radius:4px;cursor:pointer;">
+                            Annuler
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+        <style>
+            .plan-button {
+                opacity: 0.7;
+                transition: opacity 0.3s ease;
+            }
+            .plan-button.active {
+                opacity: 1;
+            }
+            .view-content {
+                display: none;
+            }
+            #planning-content {
+                display: none;
+            }
+            #planning-content.view-enfant {
+                display: block;
+            }
+            .action-buttons {
+                display: flex;
+                gap: 0.5rem;
+                margin-left: 0.5rem;
+            }
+            .delete-btn {
+                background: #f44336;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 0.25rem 0.5rem;
+                cursor: pointer;
+                transition: background-color 0.3s;
+            }
+            .delete-btn:hover {
+                background: #d32f2f;
+            }
+            .add-hours-btn, .add-shift-btn {
+                background: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 0.25rem 0.5rem;
+                cursor: pointer;
+                transition: background-color 0.3s;
+            }
+            .add-hours-btn:hover, .add-shift-btn:hover {
+                background: #388E3C;
+            }
+        </style>
+
+        <script>
+        // Fonction pour fermer une popup en cliquant en dehors
+        function setupModalCloseOnOutsideClick(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.addEventListener('click', function(e) {
+                // Si le clic est sur le modal lui-même (et non sur son contenu)
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Gestion des boutons de vue
+        document.querySelectorAll('.plan-button').forEach(button => {
+            button.addEventListener('click', function() {
+                // Retirer la classe active de tous les boutons
+                document.querySelectorAll('.plan-button').forEach(btn => btn.classList.remove('active'));
+                // Ajouter la classe active au bouton cliqué
+                this.classList.add('active');
+                
+                // Cacher tous les contenus
+                document.querySelectorAll('.view-content, #planning-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                // Afficher le contenu correspondant
+                const view = this.dataset.view;
+                if (view === 'enfant') {
+                    document.getElementById('planning-content').style.display = 'block';
+                    // Ajouter un défilement fluide vers le contenu
+                    document.getElementById('planning-content').scrollIntoView({ 
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                } else {
+                    document.getElementById(view + '-content').style.display = 'block';
+                    document.getElementById(view + '-content').scrollIntoView({ 
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        document.querySelectorAll('.add-hours-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.getElementById('add-hours-modal').style.display = 'flex';
+                document.getElementById('modal-enfant-id').value = this.dataset.enfantId;
+                document.getElementById('modal-date').value = this.dataset.date;
+                document.getElementById('modal-start-time').value = this.dataset.start || '';
+                document.getElementById('modal-end-time').value = this.dataset.end || '';
+                document.getElementById('modal-is-absent').value = "0";
+            });
+        });
+        document.getElementById('close-modal').onclick = function() {
+            document.getElementById('add-hours-modal').style.display = 'none';
+        };
+        document.getElementById('set-absent').onclick = function() {
+            document.getElementById('modal-is-absent').value = "1";
+            document.getElementById('add-hours-form').submit();
+        };
+        document.getElementById('add-hours-form').onsubmit = function() {
+            if(document.getElementById('modal-is-absent').value !== "1") {
+                document.getElementById('modal-is-absent').value = "0";
+            }
+        };
+
+        // Gestion du modal d'ajout d'enfant pour la semaine
+        document.getElementById('add-child-week-btn').onclick = function() {
+            document.getElementById('add-child-week-modal').style.display = 'flex';
+        };
+
+        document.getElementById('close-child-week-modal').onclick = function() {
+            document.getElementById('add-child-week-modal').style.display = 'none';
+        };
+
+        // Gestion des cases à cocher "Absent"
+        document.querySelectorAll('input[name^="absent"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const dayContainer = this.closest('div[style*="border:1px solid #eee"]');
+                const timeInputs = dayContainer.querySelectorAll('input[type="time"]');
+                timeInputs.forEach(input => {
+                    input.disabled = this.checked;
+                    if (this.checked) {
+                        input.value = '';
+                    }
+                });
+            });
+        });
+
+        // Gestion du modal pour les horaires d'éducateur
+        document.querySelectorAll('.add-shift-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.getElementById('add-shift-modal').style.display = 'flex';
+                document.getElementById('modal-educateur-id').value = this.dataset.educateurId;
+                document.getElementById('modal-shift-date').value = this.dataset.date;
+                document.getElementById('modal-shift-start-time').value = this.dataset.start || '';
+                document.getElementById('modal-shift-end-time').value = this.dataset.end || '';
+            });
+        });
+
+        document.getElementById('close-shift-modal').onclick = function() {
+            document.getElementById('add-shift-modal').style.display = 'none';
+        };
+
+        // Gestion du modal pour les horaires hebdomadaires
+        document.getElementById('add-shift-week-btn').onclick = function() {
+            document.getElementById('add-shift-week-modal').style.display = 'flex';
+        };
+
+        document.getElementById('close-shift-week-modal').onclick = function() {
+            document.getElementById('add-shift-week-modal').style.display = 'none';
+        };
+
+        // Mise à jour des horaires existants lors de la sélection d'un éducateur
+        document.querySelector('select[name="educateur_id"]').addEventListener('change', function() {
+            const educateurId = this.value;
+            if (!educateurId) return;
+
+            // Récupérer les horaires existants pour cet éducateur
+            fetch(`/planning/get-shifts/${educateurId}?week={{ year }}-W{{ week }}`)
+                .then(response => response.json())
+                .then(shifts => {
+                    // Mettre à jour les champs de formulaire avec les horaires existants
+                    shifts.forEach(shift => {
+                        const date = shift.date;
+                        const startInput = document.querySelector(`input[name="start_time[${date}]"]`);
+                        const endInput = document.querySelector(`input[name="end_time[${date}]"]`);
+                        if (startInput && endInput) {
+                            startInput.value = shift.start_time;
+                            endInput.value = shift.end_time;
+                        }
+                    });
+                });
+        });
+
+        // Configuration de la fermeture des popups en cliquant en dehors
+        setupModalCloseOnOutsideClick('add-hours-modal');
+        setupModalCloseOnOutsideClick('add-shift-modal');
+        setupModalCloseOnOutsideClick('add-shift-week-modal');
+        setupModalCloseOnOutsideClick('add-child-week-modal');
+
+        // Empêcher la fermeture lors du clic sur le contenu du modal
+        document.querySelectorAll('#add-hours-modal form, #add-shift-modal form, #add-shift-week-modal form, #add-child-week-modal form').forEach(form => {
+            form.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        });
+
+        // Gestion des boutons de vue journalière
+        document.getElementById('view-child-daily-btn').addEventListener('click', function() {
+            // Cacher tous les contenus
+            document.querySelectorAll('.view-content, #planning-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            // Afficher la vue jour
+            document.getElementById('jour-content').style.display = 'block';
+            // Mettre à jour les boutons de vue
+            document.querySelectorAll('.plan-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.plan-button[data-view="jour"]').classList.add('active');
+            // Défiler vers le contenu
+            document.getElementById('jour-content').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        });
+
+        document.getElementById('view-equipe-daily-btn').addEventListener('click', function() {
+            // Cacher tous les contenus
+            document.querySelectorAll('.view-content, #planning-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            // Afficher la vue jour
+            document.getElementById('jour-content').style.display = 'block';
+            // Mettre à jour les boutons de vue
+            document.querySelectorAll('.plan-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.plan-button[data-view="jour"]').classList.add('active');
+            // Défiler vers le contenu
+            document.getElementById('jour-content').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        });
+
+        // Gestion des modals de suppression
+        document.getElementById('delete-children-btn').onclick = function() {
+            document.getElementById('delete-children-modal').style.display = 'flex';
+        };
+
+        document.getElementById('close-delete-children-modal').onclick = function() {
+            document.getElementById('delete-children-modal').style.display = 'none';
+        };
+
+        document.getElementById('delete-educators-btn').onclick = function() {
+            document.getElementById('delete-educators-modal').style.display = 'flex';
+        };
+
+        document.getElementById('close-delete-educators-modal').onclick = function() {
+            document.getElementById('delete-educators-modal').style.display = 'none';
+        };
+
+        // Configuration de la fermeture des modals de suppression
+        setupModalCloseOnOutsideClick('delete-children-modal');
+        setupModalCloseOnOutsideClick('delete-educators-modal');
+
+        // Empêcher la fermeture lors du clic sur le contenu des modals
+        document.querySelectorAll('#delete-children-modal form, #delete-educators-modal form').forEach(form => {
+            form.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        });
+
+        // Gestion du formulaire de suppression multiple
+        document.getElementById('delete-educators-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Récupérer tous les checkboxes cochés
+            const selectedEducators = Array.from(document.querySelectorAll('input[name="educators[]"]:checked'))
+                .map(checkbox => checkbox.value);
+            
+            if (selectedEducators.length === 0) {
+                alert('Veuillez sélectionner au moins un éducateur à supprimer.');
+                return;
+            }
+
+            if (!confirm('Êtes-vous sûr de vouloir supprimer les éducateurs sélectionnés ? Cette action est irréversible.')) {
+                return;
+            }
+            
+            // Créer un FormData avec les données
+            const formData = new FormData(this);
+            formData.set('educators', JSON.stringify(selectedEducators));
+            
+            // Afficher un indicateur de chargement
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = 'Suppression en cours...';
+            
+            // Envoyer la requête
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(text || 'Erreur lors de la suppression');
+                    });
+                }
+                return response.text();
+            })
+            .then(data => {
+                console.log('Réponse du serveur:', data);
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Erreur détaillée:', error);
+                alert('Une erreur est survenue lors de la suppression des éducateurs : ' + error.message);
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            });
+        });
+
+        // Fermer la modal après une suppression réussie
+        document.getElementById('delete-educators-modal').addEventListener('hidden.bs.modal', function () {
+            const form = document.getElementById('delete-educators-form');
+            form.reset();
+        });
+        </script>
+    {% else %}
+        <div>
+            <h2>Planning</h2>
+        </div>
+
+        <div id="button-plan-educator">
+            <button class="plan-button active" data-view="enfant" style="--bg:#ECA36C">Enfants</button>
+            <button class="plan-button" data-view="equipe" style="--bg:#ECA36C">Mon planning</button>
+        </div>
+
+        <!-- Vue des enfants -->
+        <div id="planning-content" class="view-enfant">
+            <div id="week-selector">
+                <a href="{{ path('app_planning', {'week': year ~ '-W' ~ (week-1), 'selectedDay': selectedDay}) }}#planning-grid">&lt;</a>
+                <span>Semaine {{ week }}</span>
+                <a href="{{ path('app_planning', {'week': year ~ '-W' ~ (week+1), 'selectedDay': selectedDay}) }}#planning-grid">&gt;</a>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:1rem;margin:1rem 0;">
+                <div id="days-buttons" style="flex:1;">
+                    {% for day in weekDays %}
+                        <a href="{{ path('app_planning', {'week': year ~ '-W' ~ week, 'selectedDay': day.date}) }}#planning-grid">
+                            <button class="{{ day.date == selectedDay ? 'active-day' : '' }}">
+                                {{ day.name|capitalize }}<br>{{ day.display }}
+                            </button>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Grille horaire de 7h à 19h -->
+            <div id="hours-grid" style="display:flex;gap:2px;margin:1rem 0 1rem 160px;">
+                {% for h in 7..19 %}
+                    <div style="flex:1;text-align:center;font-size:0.9em;color:#888;">{{ '%02d'|format(h) }}h</div>
+                {% endfor %}
+            </div>
+
+            <!-- Grille des enfants pour le jour sélectionné -->
+            <section id="planning-grid">
+                {% for enfant in enfants %}
+                    {% if app.user in enfant.childUsers|map(cu => cu.user) %}
+                        <div class="enfant-row" style="display:flex;align-items:center;">
+                            <div class="info" style="width:150px;">
+                                {% if enfant.picture %}
+                                    <img src="{{ asset('uploads/children/' ~ enfant.picture) }}" alt="Avatar {{ enfant.name }} {{ enfant.lastname }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                                {% else %}
+                                    <img src="{{ asset('img/avatar-placeholder.png') }}" alt="Avatar {{ enfant.name }} {{ enfant.lastname }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                                {% endif %}
+                                <span>{{ enfant.name }} {{ enfant.lastname }}</span>
+                            </div>
+                            <div class="horaire-bar" style="flex:1;position:relative;height:32px;background:#f3f3f3;border-radius:8px;overflow:hidden;">
+                                {% set jour = enfant.jours|filter(j => j.date == selectedDay)|first %}
+                                {% if jour and jour.present %}
+                                    {% set startHour = jour.start ? (jour.start|split(':')[0]) + (jour.start|split(':')[1] / 60) : 7 %}
+                                    {% set endHour = jour.end ? (jour.end|split(':')[0]) + (jour.end|split(':')[1] / 60) : 7 %}
+                                    {% set minHour = 7 %}
+                                    {% set maxHour = 19 %}
+                                    {% set total = maxHour - minHour %}
+                                    {% set left = ((startHour - minHour) / total * 100) %}
+                                    {% if left < 0 %}{% set left = 0 %}{% endif %}
+                                    {% if left > 100 %}{% set left = 100 %}{% endif %}
+                                    {% set width = ((endHour - startHour) / total * 100) %}
+                                    {% if width < 0 %}{% set width = 0 %}{% endif %}
+                                    {% if width > (100 - left) %}{% set width = 100 - left %}{% endif %}
+                                    <div style="position:absolute;left:{{ left }}%;width:{{ width }}%;height:100%;background:#4caf50;opacity:0.8;border-radius:8px;"></div>
+                                    <div style="position:absolute;left:{{ left }}%;top:0;width:{{ width }}%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;">
+                                        {{ jour.start }} - {{ jour.end }}
+                                    </div>
+                                {% else %}
+                                    <span style="color:#aaa;position:absolute;left:10px;top:6px;">Absent</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </section>
+        </div>
+
+        <!-- Vue du planning de l'éducateur -->
+        <div id="equipe-content" class="view-content">
+            <div id="week-selector-equipe">
+                <a href="{{ path('app_planning', {'week': year ~ '-W' ~ (week-1), 'selectedDay': selectedDay, 'view': 'equipe'}) }}#planning-grid-equipe">&lt;</a>
+                <span>Semaine {{ week }}</span>
+                <a href="{{ path('app_planning', {'week': year ~ '-W' ~ (week+1), 'selectedDay': selectedDay, 'view': 'equipe'}) }}#planning-grid-equipe">&gt;</a>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:1rem;margin:1rem 0;">
+                <div id="days-buttons-equipe" style="flex:1;">
+                    {% for day in weekDays %}
+                        <a href="{{ path('app_planning', {'week': year ~ '-W' ~ week, 'selectedDay': day.date, 'view': 'equipe'}) }}#planning-grid-equipe">
+                            <button class="{{ day.date == selectedDay ? 'active-day' : '' }}">
+                                {{ day.name|capitalize }}<br>{{ day.display }}
+                            </button>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Grille horaire de 7h à 19h -->
+            <div id="hours-grid-equipe" style="display:flex;gap:2px;margin:1rem 0 1rem 160px;">
+                {% for h in 7..19 %}
+                    <div style="flex:1;text-align:center;font-size:0.9em;color:#888;">{{ '%02d'|format(h) }}h</div>
+                {% endfor %}
+            </div>
+
+            <!-- Grille de l'éducateur pour le jour sélectionné -->
+            <section id="planning-grid-equipe">
+                {% for educateur in educateursData %}
+                    {% set currentShift = null %}
+                    {% for shift_item in educateur.shifts %}
+                        {% if shift_item.date|date('Y-m-d') == selectedDay and currentShift == null %}
+                            {% set currentShift = shift_item %}
+                        {% endif %}
+                    {% endfor %}
+                    <div class="educateur-row" style="display:flex;align-items:center;">
+                        <div class="info" style="width:150px;">
+                            <img src="{{ asset(educateur.picture ?: 'img/avatar-placeholder.png') }}" alt="Avatar {{ educateur.nom }}">
+                            <span>{{ educateur.nom }} {{ educateur.prenom }}</span>
+                            <div class="action-buttons">
+                                <button class="add-shift-btn"
+                                        data-educateur-id="{{ educateur.id }}"
+                                        data-date="{{ selectedDay }}"
+                                        data-start="{{ currentShift ? currentShift.startTime|date('H:i') : '' }}"
+                                        data-end="{{ currentShift ? currentShift.endTime|date('H:i') : '' }}"
+                                        title="Ajouter ou modifier des heures">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="horaire-bar" style="flex:1;position:relative;height:32px;background:#f3f3f3;border-radius:8px;overflow:hidden;">
+                            {% if currentShift %}
+                                {% set startHour = currentShift.startTime ? (currentShift.startTime|date('H')) + (currentShift.startTime|date('i') / 60) : 7 %}
+                                {% set endHour = currentShift.endTime ? (currentShift.endTime|date('H')) + (currentShift.endTime|date('i') / 60) : 7 %}
+                                {% set minHour = 7 %}
+                                {% set maxHour = 19 %}
+                                {% set total = maxHour - minHour %}
+                                {% set left = ((startHour - minHour) / total * 100) %}
+                                {% if left < 0 %}{% set left = 0 %}{% endif %}
+                                {% if left > 100 %}{% set left = 100 %}{% endif %}
+                                {% set width = ((endHour - startHour) / total * 100) %}
+                                {% if width < 0 %}{% set width = 0 %}{% endif %}
+                                {% if width > (100 - left) %}{% set width = 100 - left %}{% endif %}
+                                <div style="position:absolute;left:{{ left }}%;width:{{ width }}%;height:100%;background:#ECA36C;opacity:0.8;border-radius:8px;"></div>
+                                <div style="position:absolute;left:{{ left }}%;top:0;width:{{ width }}%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;">
+                                    {{ currentShift.startTime|date('H:i') }} - {{ currentShift.endTime|date('H:i') }}
+                                </div>
+                            {% else %}
+                                <span style="color:#aaa;position:absolute;left:10px;top:6px;">Non programmé</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </section>
+        </div>
+
+        <style>
+            #button-plan-educator {
+                display: flex;
+                justify-content: center;
+                gap: 1rem;
+                margin: 1rem 0;
+            }
+
+            .plan-button {
+                padding: 0.5rem 1.5rem;
+                border: none;
+                border-radius: 8px;
+                background: var(--bg);
+                color: white;
+                cursor: pointer;
+                opacity: 0.7;
+                transition: opacity 0.3s ease;
+            }
+
+            .plan-button.active {
+                opacity: 1;
+            }
+
+            .view-content {
+                display: none;
+            }
+
+            #planning-content {
+                display: none;
+            }
+
+            #planning-content.view-enfant {
+                display: block;
+            }
+
+            #week-selector {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 1rem;
+                margin: 1rem 0;
+                font-size: 1.2rem;
+            }
+
+            #week-selector a {
+                color: #ECA36C;
+                text-decoration: none;
+                font-size: 1.5rem;
+                font-weight: bold;
+            }
+
+            #days-buttons {
+                display: flex;
+                gap: 0.5rem;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            #days-buttons button {
+                background: #fff;
+                border: 2px solid #ECA36C;
+                padding: 0.5rem 1rem;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            #days-buttons button:hover {
+                background: #ECA36C;
+                color: white;
+            }
+
+            .active-day {
+                background-color: #ECA36C !important;
+                color: white !important;
+            }
+
+            .enfant-row {
+                margin-bottom: 1rem;
+            }
+
+            .info {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .info img {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                object-fit: cover;
+            }
+
+            .info span {
+                font-weight: 500;
+            }
+        </style>
+
+        <script>
+            // Gestion des boutons de vue
+            document.querySelectorAll('.plan-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Retirer la classe active de tous les boutons
+                    document.querySelectorAll('.plan-button').forEach(btn => btn.classList.remove('active'));
+                    // Ajouter la classe active au bouton cliqué
+                    this.classList.add('active');
+                    
+                    // Cacher tous les contenus
+                    document.querySelectorAll('.view-content, #planning-content').forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    
+                    // Afficher le contenu correspondant
+                    const view = this.dataset.view;
+                    if (view === 'enfant') {
+                        document.getElementById('planning-content').style.display = 'block';
+                        document.getElementById('planning-content').scrollIntoView({ 
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    } else {
+                        document.getElementById(view + '-content').style.display = 'block';
+                        document.getElementById(view + '-content').scrollIntoView({ 
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        </script>
+    {% endif %}
+{% endblock %}

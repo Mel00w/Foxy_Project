@@ -1,0 +1,156 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Messages{% endblock %}
+
+{% block idheader %}id="home-header"{% endblock %}
+
+{% block auth_buttons %}
+    <div class="auth-buttons">
+        {% if not app.user %}
+            <a href="{{ path('app_login') }}" class="auth-button" style="--bg:#4CAF50">
+                <i class="fa-solid fa-right-to-bracket"></i> Connexion
+            </a>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block imgheader %}
+    <img src="{{ asset('img/foxy_home.webp') }}" alt="Header Image">
+{% endblock %}
+
+{% block idmain %}id="home-main"{% endblock %}
+
+{% block body %}
+<div>
+<h2>Bienvenue ! </h2>
+</div>
+<section>
+  <div id="container-card"> 
+    <a href="{{ path('app_documents_index') }}" class="card" style="--bg:rgba(184, 230, 193, 0.20)">
+      <i class="fa-regular fa-folder"  style="--bg:rgb(184, 230, 193)"></i>
+      <span>Document</span>
+    </a>
+    
+    <a href="{{ path('app_messages_index') }}" class="card" style="--bg:rgba(244, 179, 165, 0.20)">
+      <i class="fa-regular fa-message" style="--bg:rgb(244, 179, 165)"></i>
+      <span>Message</span>
+      <div class="notification-dot"></div>
+    </a>
+    
+    <a href="{{ path('app_planning') }}" class="card" style="--bg:rgba(236, 163, 108, 0.20)">
+      <i class="fa-regular fa-calendar" style="--bg:rgb(236, 163, 108)"></i>
+      <span>Planning</span>
+    </a>
+    
+    <a href="{{ path('app_contact') }}" class="card" style="--bg:rgba(168, 215, 230, 0.20)">
+      <i class="fa-solid fa-signs-post" style="--bg:rgb(168, 215, 230)"></i>
+      <span>Contact</span>
+    </a>
+  </div>
+
+  <a href="{{ path('app_children_index') }}" class="card isolate" style="--bg:rgba(255, 234, 142, 0.20)">
+    <i class="fa-solid fa-children" style="--bg:rgb(255, 234, 142)"></i>
+    <span>Famille</span>
+  </a>
+</section>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        // Vérifier si on est sur la page d'accueil
+        if (window.location.pathname === '/' || window.location.pathname === '/home') {
+            // Fonction pour vérifier les messages non lus
+            function checkUnreadMessages() {
+                fetch('{{ path('app_messages_unread_count') }}', {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erreur réseau');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Nombre de messages non lus:', data.count);
+                    const messageCard = document.querySelector('a[href="{{ path('app_messages_index') }}"]');
+                    if (!messageCard) {
+                        console.error('Carte de message non trouvée');
+                        return;
+                    }
+
+                    // Supprimer complètement la classe et masquer la pastille
+                    messageCard.classList.remove('has-unread');
+                    const notificationDot = messageCard.querySelector('.notification-dot');
+                    if (notificationDot) {
+                        notificationDot.style.display = 'none';
+                        notificationDot.style.opacity = '0';
+                    }
+
+                    // Ajouter la classe seulement si il y a vraiment des messages non lus
+                    if (data.count > 0) {
+                        console.log('Ajout de la classe has-unread - messages non lus détectés');
+                        messageCard.classList.add('has-unread');
+                        if (notificationDot) {
+                            notificationDot.style.display = 'block';
+                            notificationDot.style.opacity = '1';
+                        }
+                    } else {
+                        console.log('Aucun message non lu - pastille masquée');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la vérification des messages non lus:', error);
+                });
+            }
+
+            let checkInterval = null;
+
+            // Vérifier les messages non lus au chargement de la page
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('Page d\'accueil chargée, vérification des messages non lus...');
+                
+                // Attendre un peu avant la première vérification pour éviter les conflits avec l'état initial
+                setTimeout(() => {
+                    checkUnreadMessages();
+                }, 100);
+                
+                // Puis vérifier toutes les 5 secondes
+                checkInterval = setInterval(checkUnreadMessages, 5000);
+
+                // Vérifier aussi quand la page devient visible
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) {
+                        console.log('Page visible, vérification des messages non lus...');
+                        checkUnreadMessages();
+                    }
+                });
+            });
+
+            // Arrêter le polling quand on quitte la page
+            window.addEventListener('beforeunload', function() {
+                if (checkInterval) {
+                    clearInterval(checkInterval);
+                    checkInterval = null;
+                }
+            });
+
+            // Arrêter le polling après chaque navigation Turbo
+            document.addEventListener('turbo:render', function() {
+                if (!window.location.pathname.includes('/') && !window.location.pathname.includes('/home')) {
+                    if (checkInterval) {
+                        clearInterval(checkInterval);
+                        checkInterval = null;
+                    }
+                }
+            });
+        }
+    </script>
+{% endblock %}

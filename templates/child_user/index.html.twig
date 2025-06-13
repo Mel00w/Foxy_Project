@@ -1,0 +1,169 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Associations Éducateurs-Enfants | Foxy{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <h1>Associations Éducateurs-Enfants</h1>
+
+        <div class="actions">
+            <a href="{{ path('app_child_user_new') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nouvelle association
+            </a>
+        </div>
+
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Enfant</th>
+                        <th>Éducateur</th>
+                        <th>Type de lien</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for child_user in child_users %}
+                    <tr>
+                        <td>{{ child_user.child.name }} {{ child_user.child.lastname }}</td>
+                        <td>{{ child_user.user.name }} {{ child_user.user.lastname }}</td>
+                        <td>
+                            {% if child_user.lien == 'principal' %}
+                                <span class="badge bg-primary">Principal</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Secondaire</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" action="{{ path('app_child_user_delete', {'id': child_user.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette association ?');" style="display: inline-block">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ child_user.id) }}">
+                                <button class="btn btn-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center">Aucune association trouvée</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 2rem;
+        }
+
+        .actions {
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #1976D2;
+        }
+
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table th,
+        .table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .table th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+        }
+
+        .table tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .badge {
+            padding: 0.35em 0.65em;
+            font-size: 0.75em;
+            font-weight: 600;
+            border-radius: 4px;
+        }
+
+        .bg-primary {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .bg-secondary {
+            background-color: #757575;
+            color: white;
+        }
+
+        .alert {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+
+        .alert-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+{% endblock %} 

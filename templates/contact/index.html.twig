@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block idbody %}id="log" class="contact-page"
+{% endblock %}
+{% block title %}Contact | Foxy
+{% endblock %}
+
+{% block body %}
+	<div id="cloud1">
+		<svg width="134" height="75" viewbox="0 0 134 75" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M98.5114 37.3242C98.5114 57.9378 138.283 74.6484 61.1872 74.6484C-17.4384 74.6484 23.863 57.9378 23.863 37.3242C23.863 16.7106 40.5736 0 61.1872 0C81.8008 0 98.5114 16.7106 98.5114 37.3242Z" fill="#FFFAE4"/>
+			<path d="M61.1872 44.0548C61.1872 60.9512 94.2283 74.6484 30.5936 74.6484C13.6972 74.6484 0 60.9512 0 44.0548C0 27.1584 15.2968 16.8265 30.5936 22.3333C48.032 28.6111 61.1872 27.1584 61.1872 44.0548Z" fill="#FFFAE4"/>
+			<path d="M134 44.0548C134 60.9511 111.737 74.6484 94.8402 74.6484C30.2877 74.6484 64.2466 60.9511 64.2466 44.0548C76.79 44.0548 89.5694 13.7671 106.466 13.7671C123.362 13.7671 134 27.1584 134 44.0548Z" fill="#FFFAE4"/>
+		</svg>
+	</div>
+	<div id="cloud2">
+		<svg width="134" height="75" viewbox="0 0 134 75" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M98.5114 37.3242C98.5114 57.9378 138.283 74.6484 61.1872 74.6484C-17.4384 74.6484 23.863 57.9378 23.863 37.3242C23.863 16.7106 40.5736 0 61.1872 0C81.8008 0 98.5114 16.7106 98.5114 37.3242Z" fill="#FFFAE4"/>
+			<path d="M61.1872 44.0548C61.1872 60.9512 94.2283 74.6484 30.5936 74.6484C13.6972 74.6484 0 60.9512 0 44.0548C0 27.1584 15.2968 16.8265 30.5936 22.3333C48.032 28.6111 61.1872 27.1584 61.1872 44.0548Z" fill="#FFFAE4"/>
+			<path d="M134 44.0548C134 60.9511 111.737 74.6484 94.8402 74.6484C30.2877 74.6484 64.2466 60.9511 64.2466 44.0548C76.79 44.0548 89.5694 13.7671 106.466 13.7671C123.362 13.7671 134 27.1584 134 44.0548Z" fill="#FFFAE4"/>
+		</svg>
+	</div>
+	<div id="foxy_log">
+		<img src="/img/foxy_login.webp" alt="foxy login">
+	</div>
+	<svg class="green" width="100%" height="auto" viewbox="0 0 1440 390" fill="none" xmlns="http://www.w3.org/2000/svg" preserveaspectratio="xMidYMid meet">
+		<path d="M1440 390H1.5L0.5 25.5C158.043 3.83785 663.426 193.512 737.5 179C990.437 142.967 912.446 -69.8136 1440 24.0557V390Z" fill="#B8E6C1"/>
+	</svg>
+	<div id="yellow"></div>
+
+	<div class="contact-info-block">
+		<div class="logo-la-taniere">
+			<img src="{{ asset('img/LaTaniereDesPetits.svg') }}" alt="Logo crèche">
+            <div >
+				<p>127 Rue des aubepines,<br>05040 Antibes</p>
+			</div>
+
+		</div>
+		<div class="info-grid">
+			<div class="info-item">
+				<i class="fa-solid fa-envelope"></i>
+				<p>ltdpa@gmail.com</p>
+			</div>
+
+			<div class="info-item">
+				<i class="fa-solid fa-phone"></i>
+				<p>06.69.96.24.08</p>
+			</div>
+
+			<div class="info-item">
+				<i class="fa-solid fa-calendar"></i>
+				<p>Lundi au vendredi</p>
+			</div>
+
+			<div class="info-item">
+				<i class="fa-solid fa-clock"></i>
+				<p>07:00 - 19:00</p>
+			</div>
+		</div>
+	</div>
+
+{% endblock %}

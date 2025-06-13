@@ -1,0 +1,247 @@
+{% extends 'base.html.twig' %}
+
+{% block idheader %}id="document-header"{% endblock %}
+{% block title %}Documents | Foxy{% endblock %}
+{% block imgheader %}
+    <img src="{{ asset('img/foxy_all.webp') }}" alt="Header Image">
+{% endblock %}
+{% block idmain %}id="document-main"{% endblock %}
+
+{% block body %}
+    <div>
+        <h2>Documents</h2>
+    </div>
+
+    {% if 'ROLE_ADMIN' in roles %}
+        <div id="button-doc-admin">
+            <button class="doc-button active" data-view="general" style="--bg:#B8E6C1">Documents Généraux</button>
+            <button class="doc-button" data-view="family" style="--bg:#F4B3A5">Documents par Famille</button>
+        </div>
+
+        <div id="document-content" class="view-general">
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin:1rem;">
+                <button id="add-document-btn" style="--bg:#4CAF50;padding:0.5rem 1rem;height:fit-content;font-size:0.9em;" title="Ajouter un document">
+                    <i class="fa-solid fa-plus"></i> Ajouter un document
+                </button>
+            </div>
+            <div class="document-sections">
+                <section class="document-section">
+                    <div class="document-list">
+                        {% if generalDocuments is empty %}
+                            <p>Aucun document général disponible pour le moment.</p>
+                        {% else %}
+                            {% for document in generalDocuments %}
+                                <div class="document-item">
+                                    <i class="fa-regular fa-file"></i>
+                                    <span>{{ document.originalFilename }}</span>
+                                    <a href="{{ asset('uploads/documents/general/' ~ document.filename) }}" class="btn-download" title="Télécharger" target="_blank">
+                                        <i class="fa-solid fa-download"></i>
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div id="family-content" class="view-content">
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin:1rem;">
+                <button id="add-family-document-btn" style="--bg:#4CAF50;padding:0.5rem 1rem;height:fit-content;font-size:0.9em;" title="Ajouter un document familial">
+                    <i class="fa-solid fa-plus"></i> Ajouter un document familial
+                </button>
+            </div>
+            <div class="document-sections">
+                <section class="document-section">
+                    <div class="document-list">
+                        {% if familyDocuments is empty %}
+                            <p>Aucun document familial disponible pour le moment.</p>
+                        {% else %}
+                            {% for family in familyDocuments %}
+                                <div class="family-documents">
+                                    <h4>{{ family.name }}</h4>
+                                    {% for document in family.documents %}
+                                        <div class="document-item">
+                                            <i class="fa-regular fa-file"></i>
+                                            <span>{{ document.originalFilename }}</span>
+                                            <a href="{{ asset('uploads/documents/family/' ~ document.child.id ~ '/' ~ document.filename) }}" class="btn-download" title="Télécharger" target="_blank">
+                                                <i class="fa-solid fa-download"></i>
+                                            </a>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Modal pour ajouter un document -->
+        <div id="add-document-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; z-index:1000;">
+            <form id="add-document-form" method="post" action="{{ path('app_documents_add') }}" enctype="multipart/form-data" style="background:#fff; padding:2rem; border-radius:10px; min-width:300px;">
+                <h3>Ajouter un document</h3>
+                
+                <div style="margin-bottom:1rem;">
+                    <label>Type de document :
+                        <select name="type" id="document-type-select" required style="width:100%;padding:0.5rem;margin-top:0.5rem;">
+                            <option value="general">Document Général</option>
+                            <option value="family">Document Familial</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div style="margin-bottom:1rem;">
+                    <label>Document :
+                        <input type="file" name="document" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="width:100%;margin-top:0.5rem;">
+                    </label>
+                </div>
+
+                <div id="child-select-container" style="display:none;margin-bottom:1rem;">
+                    <label>Enfant :
+                        <select name="child_id" id="child-select" style="width:100%;padding:0.5rem;margin-top:0.5rem;">
+                            <option value="">Sélectionner un enfant</option>
+                            {% for child in children %}
+                                <option value="{{ child.id }}">{{ child.name }} {{ child.lastname }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </div>
+
+                <div style="margin-top:1rem;display:flex;gap:1rem;justify-content:flex-end;">
+                    <button type="submit" style="background:#4CAF50;color:#fff;padding:0.5rem 1rem;border:none;border-radius:4px;cursor:pointer;">Enregistrer</button>
+                    <button type="button" id="close-document-modal" style="background:#f44336;color:#fff;padding:0.5rem 1rem;border:none;border-radius:4px;cursor:pointer;">Annuler</button>
+                </div>
+            </form>
+        </div>
+
+        <script>
+            // Gestion des boutons de vue
+            document.querySelectorAll('.doc-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('.doc-button').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    document.querySelectorAll('.view-content, #document-content').forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    
+                    const view = this.dataset.view;
+                    if (view === 'general') {
+                        document.getElementById('document-content').style.display = 'block';
+                        document.getElementById('document-content').classList.add('view-general');
+                    } else {
+                        document.getElementById(view + '-content').style.display = 'block';
+                    }
+                });
+            });
+
+            // Gestion du modal d'ajout de document
+            const addDocumentBtn = document.getElementById('add-document-btn');
+            const addFamilyDocumentBtn = document.getElementById('add-family-document-btn');
+            const modal = document.getElementById('add-document-modal');
+            const closeModalBtn = document.getElementById('close-document-modal');
+            const documentTypeSelect = document.getElementById('document-type-select');
+            const childSelectContainer = document.getElementById('child-select-container');
+
+            function openModal(type = 'general') {
+                modal.style.display = 'flex';
+                documentTypeSelect.value = type;
+                if (type === 'family') {
+                    childSelectContainer.style.display = 'block';
+                }
+            }
+
+            addDocumentBtn.addEventListener('click', () => openModal('general'));
+            addFamilyDocumentBtn.addEventListener('click', () => openModal('family'));
+            closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
+
+            documentTypeSelect.addEventListener('change', function() {
+                childSelectContainer.style.display = this.value === 'family' ? 'block' : 'none';
+            });
+
+            // Fermer le modal si on clique en dehors
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        </script>
+    {% else %}
+        <div id="button-doc-parent">
+            <button class="doc-button active" data-view="general" style="--bg:#B8E6C1">Documents Généraux</button>
+            <button class="doc-button" data-view="family" style="--bg:#F4B3A5">Documents de mes enfants</button>
+        </div>
+
+        <div id="document-content" class="view-general">
+            <div class="document-sections">
+                <section class="document-section">
+                    <div class="document-list">
+                        {% if generalDocuments is empty %}
+                            <p>Aucun document général disponible pour le moment.</p>
+                        {% else %}
+                            {% for document in generalDocuments %}
+                                <div class="document-item">
+                                    <i class="fa-regular fa-file"></i>
+                                    <span>{{ document.originalFilename }}</span>
+                                    <a href="{{ asset('uploads/documents/general/' ~ document.filename) }}" class="btn-download" title="Télécharger" target="_blank">
+                                        <i class="fa-solid fa-download"></i>
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div id="family-content" class="view-content">
+            <div class="document-sections">
+                <section class="document-section">
+                    <div class="document-list">
+                        {% if familyDocuments is empty %}
+                            <p>Aucun document familial disponible pour le moment.</p>
+                        {% else %}
+                            {% for family in familyDocuments %}
+                                <div class="family-documents">
+                                    <h4>{{ family.name }}</h4>
+                                    {% for document in family.documents %}
+                                        <div class="document-item">
+                                            <i class="fa-regular fa-file"></i>
+                                            <span>{{ document.originalFilename }}</span>
+                                            <a href="{{ asset('uploads/documents/family/' ~ document.child.id ~ '/' ~ document.filename) }}" class="btn-download" title="Télécharger" target="_blank">
+                                                <i class="fa-solid fa-download"></i>
+                                            </a>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <script>
+            // Gestion des boutons de vue pour les parents
+            document.querySelectorAll('.doc-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('.doc-button').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    document.querySelectorAll('.view-content, #document-content').forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    
+                    const view = this.dataset.view;
+                    if (view === 'general') {
+                        document.getElementById('document-content').style.display = 'block';
+                        document.getElementById('document-content').classList.add('view-general');
+                    } else {
+                        document.getElementById(view + '-content').style.display = 'block';
+                    }
+                });
+            });
+        </script>
+    {% endif %}
+{% endblock %} 

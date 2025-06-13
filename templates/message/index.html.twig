@@ -1,0 +1,1479 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Messages{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* Styles pour les fichiers joints */
+        .message-attachment {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .message-attachment i {
+            color: #4CAF50;
+            font-size: 1.2em;
+        }
+
+        .attachment-link {
+            color: #4CAF50;
+            text-decoration: none;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .attachment-link:hover {
+            text-decoration: underline;
+        }
+
+        .attachment-info {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.8em;
+        }
+
+        /* Styles pour le modal d'attachement */
+        #attachment-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #attachment-modal .modal-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            min-width: 400px;
+            max-width: 500px;
+        }
+
+        #attachment-modal .form-group {
+            margin-bottom: 1rem;
+        }
+
+        #attachment-modal label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        #attachment-modal input[type="file"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        #attachment-modal textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        #attachment-modal .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        #attachment-modal button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        #attachment-modal button[type="submit"] {
+            background: #4CAF50;
+            color: white;
+        }
+
+        #attachment-modal button[type="submit"]:hover {
+            background: #45a049;
+        }
+
+        #attachment-modal button[type="submit"]:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #attachment-modal .close-modal {
+            background: #f44336;
+            color: white;
+        }
+
+        #attachment-modal .close-modal:hover {
+            background: #da190b;
+        }
+
+        /* Amélioration du style des messages avec fichiers joints */
+        .message.sent .message-attachment {
+            background: rgba(76, 175, 80, 0.1);
+            border-color: rgba(76, 175, 80, 0.3);
+        }
+
+        .message.received .message-attachment {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="chat-container">
+        {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_EDUCATOR') %}
+            <div class="conversations-list">
+                {% for conv in conversations %}
+                    <div class="conversation-item {% if conversation and conversation.id == conv.id %}active{% endif %}" 
+                         data-conversation-id="{{ conv.id }}"
+                         data-parent-id="{{ conv.parent.id }}">
+                        <div class="conversation-avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="conversation-info">
+                            <div class="conversation-name">{{ conv.parent.name }} {{ conv.parent.lastname }}</div>
+                            <div class="conversation-last-message">
+                                {% if conv.messages|length > 0 %}
+                                    {% set lastMessage = conv.messages|last %}
+                                    {{ lastMessage.content|slice(0, 30) }}{% if lastMessage.content|length > 30 %}...{% endif %}
+                                {% else %}
+                                    Aucun message
+                                {% endif %}
+                            </div>
+                            <div class="conversation-time">
+                                {% if conv.messages|length > 0 %}
+                                    {{ conv.updatedAt|date('d/m/Y H:i') }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="chat-main">
+            {% if conversation %}
+                <div class="chat-header">
+                    <div class="chat-header-avatar">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="chat-header-info">
+                        <h3>
+                            {% if is_granted('ROLE_PARENT') %}
+                                Conversation avec l'équipe
+                            {% else %}
+                                {{ conversation.parent.name }} {{ conversation.parent.lastname }}
+                            {% endif %}
+                        </h3>
+                        <small>
+                            {% if is_granted('ROLE_PARENT') %}
+                                Tous les éducateurs et l'administrateur
+                            {% else %}
+                                Parent
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="chat-messages">
+                    {% for message in messages %}
+                        <div class="message {% if message.sender.id == app.user.id %}sent{% else %}received{% endif %}"
+                             data-message-id="{{ message.id }}">
+                            <div class="message-header">
+                                {{ message.sender.name }} {{ message.sender.lastname }}
+                                {% if message.sender.id == app.user.id %}
+                                    (Vous)
+                                {% endif %}
+                            </div>
+                            <div class="message-content">{{ message.content }}</div>
+                            {% if message.attachmentFilename %}
+                                <div class="message-attachment">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                    <a href="{{ path('app_messages_download_attachment', {'id': message.id}) }}" 
+                                       target="_blank" 
+                                       class="attachment-link">
+                                        {{ message.attachmentOriginalName }}
+                                    </a>
+                                    <small class="attachment-info">(Fichier joint)</small>
+                                </div>
+                            {% endif %}
+                            <div class="message-time">
+                                {{ message.createdAt|date('d/m/Y H:i') }}
+                                {% if message.sender.id != app.user.id and not message.isRead %}
+                                    <span class="unread-badge"></span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="chat-input">
+                    <input type="text" id="message-input" placeholder="Écrivez votre message...">
+                    <button id="send-button">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        Envoyer
+                    </button>
+                    {% if is_granted('ROLE_PARENT') %}
+                        <button id="absence-button" title="Signaler une absence">
+                            <i class="fa-solid fa-calendar-times"></i>
+                        </button>
+                        <button id="delay-button" title="Signaler un retard">
+                            <i class="fa-solid fa-clock"></i>
+                        </button>
+                        <button id="extra-hours-button" title="Demander des heures supplémentaires">
+                            <i class="fa-solid fa-calendar-plus"></i>
+                        </button>
+                    {% endif %}
+                    {% if is_granted('ROLE_PARENT') or is_granted('ROLE_ADMIN') %}
+                        <button id="attachment-button" title="Joindre un fichier">
+                            <i class="fa-solid fa-paperclip"></i>
+                        </button>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="no-conversation">
+                    <i class="fa-regular fa-comments"></i>
+                    {% if is_granted('ROLE_PARENT') %}
+                        <p>Commencez une conversation avec l'équipe</p>
+                        <small>Envoyez votre premier message pour démarrer la discussion</small>
+                        
+                        <div class="chat-input">
+                            <input type="text" id="message-input" placeholder="Écrivez votre message...">
+                            <button id="send-button">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                Envoyer
+                            </button>
+                            {% if is_granted('ROLE_PARENT') %}
+                                <button id="absence-button" title="Signaler une absence">
+                                    <i class="fa-solid fa-calendar-times"></i>
+                                </button>
+                                <button id="delay-button" title="Signaler un retard">
+                                    <i class="fa-solid fa-clock"></i>
+                                </button>
+                                <button id="extra-hours-button" title="Demander des heures supplémentaires">
+                                    <i class="fa-solid fa-calendar-plus"></i>
+                                </button>
+                            {% endif %}
+                             {% if is_granted('ROLE_PARENT') or is_granted('ROLE_ADMIN') %}
+                                <button id="attachment-button" title="Joindre un fichier">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% elseif is_granted('ROLE_ADMIN') %}
+                        <p>Sélectionnez un parent pour démarrer une conversation</p>
+                        <small>Utilisez le menu déroulant à gauche pour choisir un parent</small>
+                    {% else %}
+                        <p>Sélectionnez une conversation</p>
+                        <small>Choisissez une conversation dans la liste</small>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Absence Modal -->
+    <div id="absence-modal" class="modal">
+        <form id="absence-form" class="modal-form">
+            <h3>Signaler une absence</h3>
+            <div class="form-group">
+                <label for="absence-date">Date de l'absence :</label>
+                <input type="date" id="absence-date" required>
+            </div>
+            <div class="form-group">
+                <label for="absence-reason">Raison de l'absence :</label>
+                <textarea id="absence-reason"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Envoyer</button>
+                <button type="button" class="close-modal">Annuler</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Delay Modal -->
+    <div id="delay-modal" class="modal">
+        <form id="delay-form" class="modal-form">
+            <h3>Signaler un retard</h3>
+            <div class="form-group">
+                <label for="delay-date">Date du retard :</label>
+                <input type="date" id="delay-date" required>
+            </div>
+             <div class="form-group">
+                <label for="delay-time">Heure d'arrivée prévue :</label>
+                <input type="time" id="delay-time" required>
+            </div>
+            <div class="form-group">
+                <label for="delay-reason">Raison du retard :</label>
+                <textarea id="delay-reason"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Envoyer</button>
+                <button type="button" class="close-modal">Annuler</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Extra Hours Modal -->
+    <div id="extra-hours-modal" class="modal">
+        <form id="extra-hours-form" class="modal-form">
+            <h3>Demande d'heures supplémentaires</h3>
+             <div class="form-group">
+                <label for="extra-hours-date">Date :</label>
+                <input type="date" id="extra-hours-date" required>
+            </div>
+            <div class="form-group">
+                <label for="extra-hours-start">Heure de début :</label>
+                <input type="time" id="extra-hours-start" required>
+            </div>
+            <div class="form-group">
+                <label for="extra-hours-end">Heure de fin :</label>
+                <input type="time" id="extra-hours-end" required>
+            </div>
+            <div class="form-group">
+                <label for="extra-hours-reason">Raison de la demande :</label>
+                <textarea id="extra-hours-reason"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Envoyer</button>
+                <button type="button" class="close-modal">Annuler</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Attachment Modal -->
+    <div id="attachment-modal" class="modal">
+        <form id="attachment-form" class="modal-form">
+            <h3>Joindre un fichier</h3>
+            <div class="form-group">
+                <label for="attachment-file">Sélectionner un fichier :</label>
+                <input type="file" id="attachment-file" required>
+            </div>
+            <div class="form-group">
+                <label for="attachment-message">Message (optionnel) :</label>
+                <textarea id="attachment-message"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit">Envoyer</button>
+                <button type="button" class="close-modal">Annuler</button>
+            </div>
+        </form>
+    </div>
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        // Vérifier si on est sur la page des messages
+        if (window.location.pathname.includes('/messages')) {
+            // Variable globale pour stocker l'état de la conversation
+            window.chatState = {
+                currentConversationId: null,
+                lastPollTime: null,
+                pollingInterval: null,
+                messages: [] // Ajout d'un tableau pour stocker les messages
+            };
+
+            // Fonction pour mettre à jour le compteur de messages non lus
+            function updateUnreadCount() {
+                fetch('{{ path('app_messages_unread_count') }}', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Mettre à jour l'affichage des messages non lus dans la liste des conversations
+                    const conversationsList = document.querySelector('.conversations-list');
+                    if (conversationsList) {
+                        const conversationItems = conversationsList.querySelectorAll('.conversation-item');
+                        conversationItems.forEach(item => {
+                            const unreadBadge = item.querySelector('.unread-badge');
+                            if (unreadBadge) {
+                                unreadBadge.remove();
+                            }
+                        });
+                    }
+
+                    // Mettre à jour le compteur dans la barre de navigation
+                    const navMessageButton = document.querySelector('a[href="{{ path('app_messages_index') }}"]');
+                    if (navMessageButton) {
+                        let unreadBadge = navMessageButton.querySelector('.unread-badge');
+                        
+                        if (data.count > 0) {
+                            if (!unreadBadge) {
+                                unreadBadge = document.createElement('span');
+                                unreadBadge.className = 'unread-badge';
+                                navMessageButton.appendChild(unreadBadge);
+                            }
+                            unreadBadge.textContent = data.count;
+                        } else if (unreadBadge) {
+                            unreadBadge.remove();
+                        }
+                    }
+                })
+                .catch(error => console.error('Erreur lors de la mise à jour du compteur:', error));
+            }
+
+            // Modifier la fonction markMessagesAsRead pour appeler updateUnreadCount après le marquage
+            function markMessagesAsRead(messageIds) {
+                if (!messageIds || messageIds.length === 0) return;
+
+                fetch('{{ path('app_messages_mark_read', {id: 0}) }}'.replace('0', messageIds[0]), {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Mettre à jour l'état des messages dans l'interface
+                        messageIds.forEach(id => {
+                            const messageElement = document.querySelector(`[data-message-id="${id}"]`);
+                            if (messageElement) {
+                                const unreadBadge = messageElement.querySelector('.unread-badge');
+                                if (unreadBadge) {
+                                    unreadBadge.remove();
+                                }
+                            }
+                        });
+
+                        // Mettre à jour l'état global des messages
+                        window.chatState.messages = window.chatState.messages.map(msg => {
+                            if (messageIds.includes(msg.id)) {
+                                return { ...msg, isRead: true };
+                            }
+                            return msg;
+                        });
+
+                        // Mettre à jour le compteur de messages non lus
+                        updateUnreadCount();
+                    }
+                })
+                .catch(error => console.error('Erreur lors du marquage des messages comme lus:', error));
+            }
+
+            // Modifier la fonction displayMessages pour marquer les messages comme lus
+            function displayMessages(messages) {
+                console.log('Affichage des messages:', messages);
+                const chatMessages = document.getElementById('chat-messages');
+                if (!chatMessages) {
+                    console.error('Élément chat-messages non trouvé');
+                    return;
+                }
+
+                // Trier les messages par date
+                const sortedMessages = [...messages].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                console.log('Messages triés:', sortedMessages);
+
+                // Vider le conteneur de messages
+                chatMessages.innerHTML = '';
+
+                // Collecter les IDs des messages non lus
+                const unreadMessageIds = [];
+
+                // Afficher tous les messages
+                sortedMessages.forEach(message => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${message.isMine ? 'sent' : 'received'}`;
+                    messageDiv.dataset.messageId = message.id;
+                    
+                    // Préparer le contenu du message avec éventuellement un fichier joint
+                    let messageContent = `<div class="message-content">${message.content}</div>`;
+                    
+                    // Si le message a un fichier joint, l'ajouter
+                    if (message.attachment) {
+                        const attachmentHtml = `
+                            <div class="message-attachment">
+                                <i class="fa-solid fa-paperclip"></i>
+                                <a href="{{ path('app_messages_download_attachment', {'id': 'MESSAGE_ID'}) }}" 
+                                   target="_blank" 
+                                   class="attachment-link">
+                                    ${message.attachment.originalName}
+                                </a>
+                                <small class="attachment-info">(${formatFileSize(message.attachment.size || 0)})</small>
+                            </div>
+                        `;
+                        messageContent += attachmentHtml.replace('MESSAGE_ID', message.id);
+                    }
+                    
+                    messageDiv.innerHTML = `
+                        <div class="message-header">
+                            ${message.sender.name} ${message.sender.lastname}
+                            ${message.isMine ? ' (Vous)' : ''}
+                        </div>
+                        ${messageContent}
+                        <div class="message-time">
+                            ${new Date(message.createdAt).toLocaleString('fr-FR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })}
+                            ${!message.isMine && !message.isRead ? '<span class="unread-badge"></span>' : ''}
+                        </div>
+                    `;
+                    chatMessages.appendChild(messageDiv);
+
+                    // Si le message n'est pas lu et n'est pas de l'utilisateur courant, l'ajouter à la liste
+                    if (!message.isMine && !message.isRead) {
+                        unreadMessageIds.push(message.id);
+                    }
+                });
+
+                // Marquer les messages comme lus s'il y en a
+                if (unreadMessageIds.length > 0) {
+                    markMessagesAsRead(unreadMessageIds);
+                }
+
+                // Faire défiler jusqu'au dernier message
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                console.log('Messages affichés dans le DOM');
+            }
+
+            // Fonction pour formater la taille des fichiers
+            function formatFileSize(bytes) {
+                if (!bytes || bytes === 0) return 'Taille inconnue';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            // Fonction pour charger une conversation
+            function loadConversation(conversationId) {
+                console.log('Début du chargement de la conversation:', conversationId);
+                const chatMain = document.querySelector('.chat-main');
+                
+                // Show loading state
+                chatMain.innerHTML = '<div class="no-conversation"><i class="fa-solid fa-spinner fa-spin"></i><p>Chargement de la conversation...</p></div>';
+
+                // Arrêter le polling précédent
+                if (window.chatState.pollingInterval) {
+                    clearInterval(window.chatState.pollingInterval);
+                    window.chatState.pollingInterval = null;
+                }
+
+                // Réinitialiser lastPollTime
+                window.chatState.lastPollTime = null;
+                window.chatState.currentConversationId = conversationId;
+
+                // Charger tous les messages de la conversation
+                fetch(`{{ path('app_messages_index') }}?conversation=${conversationId}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    console.log('Réponse du serveur reçue:', response.status);
+                    if (!response.ok) {
+                        throw new Error('Erreur lors du chargement de la conversation');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Données reçues du serveur:', data);
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+
+                    if (!data.messages || !Array.isArray(data.messages)) {
+                        console.error('Format de données invalide:', data);
+                        throw new Error('Format de données invalide');
+                    }
+
+                    console.log('Nombre de messages reçus:', data.messages.length);
+
+                    // Stocker les messages dans l'état global
+                    window.chatState.messages = data.messages;
+
+                    // Construire le HTML de la conversation
+                    const html = `
+                        <div class="chat-header">
+                            <div class="chat-header-avatar">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                            <div class="chat-header-info">
+                                <h3>
+                                    {% if is_granted('ROLE_PARENT') %}
+                                        Conversation avec l'équipe
+                                    {% else %}
+                                        ${data.conversation.parent.name} ${data.conversation.parent.lastname}
+                                    {% endif %}
+                                </h3>
+                                <small>
+                                    {% if is_granted('ROLE_PARENT') %}
+                                        Tous les éducateurs et l'administrateur
+                                    {% else %}
+                                        Parent
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="chat-messages" id="chat-messages"></div>
+                        <div class="chat-input">
+                            <input type="text" id="message-input" placeholder="Écrivez votre message...">
+                            <button id="send-button">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                Envoyer
+                            </button>
+                            {% if is_granted('ROLE_PARENT') %}
+                                <button id="absence-button" title="Signaler une absence">
+                                    <i class="fa-solid fa-calendar-times"></i>
+                                </button>
+                                <button id="delay-button" title="Signaler un retard">
+                                    <i class="fa-solid fa-clock"></i>
+                                </button>
+                                <button id="extra-hours-button" title="Demander des heures supplémentaires">
+                                    <i class="fa-solid fa-calendar-plus"></i>
+                                </button>
+                            {% endif %}
+                            {% if is_granted('ROLE_PARENT') or is_granted('ROLE_ADMIN') %}
+                                <button id="attachment-button" title="Joindre un fichier">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    `;
+
+                    chatMain.innerHTML = html;
+
+                    // Afficher les messages
+                    displayMessages(window.chatState.messages);
+
+                    // Initialiser les gestionnaires de messages
+                    initializeMessageHandlers();
+
+                    // Démarrer le polling
+                    const chatMessages = document.getElementById('chat-messages');
+                    if (chatMessages) {
+                        startPolling(chatMessages);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement:', error);
+                    chatMain.innerHTML = `
+                        <div class="no-conversation">
+                            <i class="fa-solid fa-exclamation-circle"></i>
+                            <p>Erreur lors du chargement de la conversation</p>
+                            <small>${error.message}</small>
+                        </div>
+                    `;
+                });
+            }
+
+            // Fonction pour initialiser les gestionnaires d'événements des conversations
+            function initializeConversationHandlers() {
+                const conversationsList = document.querySelector('.conversations-list');
+                if (!conversationsList) return;
+
+                // Supprimer les anciens gestionnaires d'événements
+                const newConversationsList = conversationsList.cloneNode(true);
+                conversationsList.parentNode.replaceChild(newConversationsList, conversationsList);
+
+                // Attacher le nouveau gestionnaire d'événements
+                newConversationsList.addEventListener('click', handleConversationClick);
+
+                // Si une conversation est déjà active, la charger
+                const activeConversation = document.querySelector('.conversation-item.active');
+                if (activeConversation) {
+                    const conversationId = activeConversation.dataset.conversationId;
+                    if (conversationId !== window.chatState.currentConversationId) {
+                        loadConversation(conversationId);
+                    }
+                }
+            }
+
+            // Fonction pour gérer le clic sur une conversation
+            function handleConversationClick(e) {
+                const conversationItem = e.target.closest('.conversation-item');
+                if (!conversationItem) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const conversationId = conversationItem.dataset.conversationId;
+                if (!conversationId) {
+                    console.error('ID de conversation manquant');
+                    return;
+                }
+
+                if (conversationId === window.chatState.currentConversationId) {
+                    console.log('Même conversation, pas de rechargement nécessaire');
+                    return;
+                }
+
+                console.log('Changement de conversation vers:', conversationId);
+
+                // Supprimer la pastille de message non lu de la conversation sélectionnée
+                const unreadBadge = conversationItem.querySelector('.unread-badge');
+                if (unreadBadge) {
+                    unreadBadge.remove();
+                }
+
+                // Update active state
+                document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
+                conversationItem.classList.add('active');
+
+                // Update URL without page reload
+                const url = new URL(window.location.href);
+                url.searchParams.set('conversation', conversationId);
+                window.history.pushState({}, '', url);
+
+                // Load conversation
+                loadConversation(conversationId);
+            }
+
+            // Fonction pour mettre à jour la liste des conversations
+            function updateConversationList(messageData) {
+                const conversationsList = document.querySelector('.conversations-list');
+                if (!conversationsList) return;
+
+                // Vérifier si une conversation existe déjà pour ce parent
+                const existingConversation = document.querySelector(`[data-parent-id="${messageData.conversation.parent.id}"]`);
+                
+                if (existingConversation) {
+                    // Mettre à jour la conversation existante
+                    const lastMessage = existingConversation.querySelector('.conversation-last-message');
+                    const lastTime = existingConversation.querySelector('.conversation-time');
+                    if (lastMessage) lastMessage.textContent = messageData.content;
+                    if (lastTime) lastTime.textContent = new Date(messageData.createdAt).toLocaleString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    // Si c'est la conversation active, mettre à jour son ID et supprimer la pastille
+                    if (existingConversation.classList.contains('active')) {
+                        existingConversation.dataset.conversationId = messageData.conversation_id;
+                        // Supprimer la pastille de message non lu si elle existe
+                        const unreadBadge = existingConversation.querySelector('.unread-badge');
+                        if (unreadBadge) {
+                            unreadBadge.remove();
+                        }
+                    } else if (!messageData.isMine) {
+                        // Si c'est un nouveau message reçu et que la conversation n'est pas active,
+                        // ajouter une pastille de message non lu
+                        if (!existingConversation.querySelector('.unread-badge')) {
+                            const conversationInfo = existingConversation.querySelector('.conversation-info');
+                            if (conversationInfo) {
+                                const unreadBadge = document.createElement('span');
+                                unreadBadge.className = 'unread-badge';
+                                unreadBadge.style.position = 'absolute';
+                                unreadBadge.style.top = '10px';
+                                unreadBadge.style.right = '10px';
+                                conversationInfo.style.position = 'relative';
+                                conversationInfo.appendChild(unreadBadge);
+                            }
+                        }
+                    }
+                } else {
+                    // Créer un nouvel élément de conversation
+                    const conversationDiv = document.createElement('div');
+                    conversationDiv.className = 'conversation-item active';
+                    conversationDiv.dataset.conversationId = messageData.conversation_id;
+                    conversationDiv.dataset.parentId = messageData.conversation.parent.id;
+                    conversationDiv.innerHTML = `
+                        <div class="conversation-avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="conversation-info" style="position: relative;">
+                            <div class="conversation-name">
+                                ${messageData.conversation.parent.name} ${messageData.conversation.parent.lastname}
+                            </div>
+                            <div class="conversation-last-message">${messageData.content}</div>
+                            <div class="conversation-time">${new Date(messageData.createdAt).toLocaleString('fr-FR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })}</div>
+                        </div>
+                    `;
+                    conversationsList.insertBefore(conversationDiv, conversationsList.firstChild);
+                }
+            }
+
+            // Fonction pour initialiser les gestionnaires de messages
+            function initializeMessageHandlers() {
+                const messageInput = document.getElementById('message-input');
+                const sendButton = document.getElementById('send-button');
+                const attachmentButton = document.getElementById('attachment-button');
+                const chatMessages = document.getElementById('chat-messages');
+
+                console.log('Initialisation des gestionnaires de messages:', {
+                    messageInput: !!messageInput,
+                    sendButton: !!sendButton,
+                    attachmentButton: !!attachmentButton,
+                    chatMessages: !!chatMessages
+                });
+
+                // Gestion du bouton d'attachement
+                if (attachmentButton) {
+                    attachmentButton.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        document.getElementById('attachment-modal').style.display = 'flex';
+                    };
+                }
+
+                // Gestion de la fermeture du modal d'attachement
+                const attachmentModal = document.getElementById('attachment-modal');
+                const attachmentForm = document.getElementById('attachment-form');
+                const closeAttachmentModal = attachmentModal?.querySelector('.close-modal');
+
+                if (closeAttachmentModal) {
+                    closeAttachmentModal.onclick = () => {
+                        attachmentModal.style.display = 'none';
+                        attachmentForm.reset();
+                    };
+                }
+
+                // Gestion de la soumission du formulaire d'attachement
+                if (attachmentForm) {
+                    attachmentForm.onsubmit = (e) => {
+                        e.preventDefault();
+                        
+                        const fileInput = document.getElementById('attachment-file');
+                        const messageInput = document.getElementById('attachment-message');
+                        const file = fileInput.files[0];
+                        
+                        if (!file) {
+                            alert('Veuillez sélectionner un fichier');
+                            return;
+                        }
+
+                        // Validation côté client
+                        const maxSize = 5 * 1024 * 1024; // 5MB
+                        if (file.size > maxSize) {
+                            alert('Le fichier est trop volumineux (maximum 5MB)');
+                            return;
+                        }
+
+                        if (file.size === 0) {
+                            alert('Le fichier est vide');
+                            return;
+                        }
+
+                        // Vérifier le type de fichier
+                        const allowedTypes = [
+                            'application/pdf',
+                            'application/msword',
+                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            'image/jpeg',
+                            'image/png',
+                            'image/gif',
+                            'text/plain',
+                            'application/vnd.ms-excel',
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                        ];
+
+                        if (!allowedTypes.includes(file.type)) {
+                            alert('Type de fichier non autorisé. Types acceptés : PDF, Word, Excel, images (JPEG, PNG, GIF), texte');
+                            return;
+                        }
+
+                        // Récupérer l'ID de la conversation
+                        let conversationId = window.chatState.currentConversationId;
+                        if (!conversationId) {
+                            const urlParams = new URLSearchParams(window.location.search);
+                            conversationId = urlParams.get('conversation');
+                            if (conversationId === 'undefined') {
+                                conversationId = null;
+                            }
+                        }
+
+                        const formData = new FormData();
+                        formData.append('attachment', file);
+                        formData.append('content', messageInput.value || 'Fichier joint');
+                        if (conversationId) {
+                            formData.append('conversation_id', conversationId);
+                        }
+
+                        // Désactiver le formulaire pendant l'envoi
+                        const submitButton = attachmentForm.querySelector('button[type="submit"]');
+                        const originalText = submitButton.innerHTML;
+                        submitButton.disabled = true;
+                        submitButton.innerHTML = 'Envoi en cours...';
+
+                        // Désactiver aussi le bouton de fermeture
+                        const closeButton = attachmentForm.querySelector('.close-modal');
+                        if (closeButton) {
+                            closeButton.disabled = true;
+                        }
+
+                        fetch('{{ path('app_messages_send_attachment') }}', {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().then(errorData => {
+                                    throw new Error(errorData.error || `Erreur HTTP: ${response.status}`);
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+
+                            // Si c'est une nouvelle conversation, mettre à jour l'URL et charger la conversation
+                            if (!window.chatState.currentConversationId) {
+                                window.chatState.currentConversationId = data.conversation_id;
+                                
+                                const url = new URL(window.location.href);
+                                url.searchParams.set('conversation', data.conversation_id);
+                                window.history.pushState({}, '', url);
+
+                                const chatMain = document.querySelector('.chat-main');
+                                if (chatMain) {
+                                    chatMain.innerHTML = `
+                                        <div class="chat-header">
+                                            <div class="chat-header-avatar">
+                                                <i class="fa-solid fa-users"></i>
+                                            </div>
+                                            <div class="chat-header-info">
+                                                <h3>
+                                                    {% if is_granted('ROLE_PARENT') %}
+                                                        Conversation avec l'équipe
+                                                    {% else %}
+                                                        ${data.conversation.parent.name} ${data.conversation.parent.lastname}
+                                                    {% endif %}
+                                                </h3>
+                                                <small>
+                                                    {% if is_granted('ROLE_PARENT') %}
+                                                        Tous les éducateurs et l'administrateur
+                                                    {% else %}
+                                                        Parent
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="chat-messages" id="chat-messages"></div>
+                                        <div class="chat-input">
+                                            <input type="text" id="message-input" placeholder="Écrivez votre message...">
+                                            <button id="send-button">
+                                                <i class="fa-solid fa-paper-plane"></i>
+                                                Envoyer
+                                            </button>
+                                            {% if is_granted('ROLE_PARENT') %}
+                                                <button id="absence-button" title="Signaler une absence">
+                                                    <i class="fa-solid fa-calendar-times"></i>
+                                                </button>
+                                                <button id="delay-button" title="Signaler un retard">
+                                                    <i class="fa-solid fa-clock"></i>
+                                                </button>
+                                                <button id="extra-hours-button" title="Demander des heures supplémentaires">
+                                                    <i class="fa-solid fa-calendar-plus"></i>
+                                                </button>
+                                            {% endif %}
+                                            {% if is_granted('ROLE_PARENT') or is_granted('ROLE_ADMIN') %}
+                                                <button id="attachment-button" title="Joindre un fichier">
+                                                    <i class="fa-solid fa-paperclip"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    `;
+
+                                    initializeMessageHandlers();
+
+                                    const newMessage = {
+                                        id: data.id,
+                                        content: data.content,
+                                        sender: data.sender,
+                                        createdAt: data.createdAt,
+                                        isMine: true,
+                                        isRead: false,
+                                        attachment: data.attachment
+                                    };
+                                    window.chatState.messages = [newMessage];
+                                    displayMessages(window.chatState.messages);
+
+                                    const chatMessages = document.getElementById('chat-messages');
+                                    if (chatMessages) {
+                                        startPolling(chatMessages);
+                                    }
+                                }
+                            } else {
+                                // Pour une conversation existante
+                                const newMessage = {
+                                    id: data.id,
+                                    content: data.content,
+                                    sender: data.sender,
+                                    createdAt: data.createdAt,
+                                    isMine: true,
+                                    isRead: false,
+                                    attachment: data.attachment
+                                };
+                                window.chatState.messages.push(newMessage);
+                                displayMessages(window.chatState.messages);
+                            }
+
+                            // Fermer le modal et réinitialiser le formulaire
+                            attachmentModal.style.display = 'none';
+                            attachmentForm.reset();
+                            updateConversationList(data);
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de l\'envoi du fichier:', error);
+                            alert('Erreur lors de l\'envoi du fichier : ' + error.message);
+                        })
+                        .finally(() => {
+                            submitButton.disabled = false;
+                            submitButton.innerHTML = originalText;
+                            if (closeButton) {
+                                closeButton.disabled = false;
+                            }
+                        });
+                    };
+                }
+
+                if (sendButton && messageInput) {
+                    console.log('Attachement des gestionnaires d\'événements');
+
+                    const sendMessage = () => {
+                        console.log('Tentative d\'envoi de message');
+                        const content = messageInput.value.trim();
+                        console.log('Contenu du message:', content);
+
+                        if (!content) {
+                            console.log('Message vide, envoi annulé');
+                            return;
+                        }
+
+                        // Récupérer l'ID de la conversation depuis l'URL ou l'état global
+                        let conversationId = window.chatState.currentConversationId;
+                        if (!conversationId) {
+                            const urlParams = new URLSearchParams(window.location.search);
+                            conversationId = urlParams.get('conversation');
+                            if (conversationId === 'undefined') {
+                                conversationId = null;
+                            }
+                        }
+                        console.log('ID de conversation:', conversationId);
+
+                        const data = new FormData();
+                        data.append('content', content);
+                        if (conversationId) {
+                            data.append('conversation_id', conversationId);
+                        }
+
+                        console.log('Envoi de la requête...');
+                        messageInput.disabled = true;
+                        sendButton.disabled = true;
+
+                        fetch('{{ path('app_messages_send') }}', {
+                            method: 'POST',
+                            body: data,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => {
+                            console.log('Réponse reçue:', response.status);
+                            if (!response.ok) {
+                                throw new Error(`Erreur HTTP: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Données reçues:', data);
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+
+                            // Si c'est une nouvelle conversation, mettre à jour l'URL et charger la conversation
+                            if (!window.chatState.currentConversationId) {
+                                console.log('Nouvelle conversation créée:', data.conversation_id);
+                                window.chatState.currentConversationId = data.conversation_id;
+                                
+                                // Mettre à jour l'URL sans recharger la page
+                                const url = new URL(window.location.href);
+                                url.searchParams.set('conversation', data.conversation_id);
+                                window.history.pushState({}, '', url);
+
+                                // Construire le HTML de la conversation
+                                const chatMain = document.querySelector('.chat-main');
+                                if (chatMain) {
+                                    chatMain.innerHTML = `
+                                        <div class="chat-header">
+                                            <div class="chat-header-avatar">
+                                                <i class="fa-solid fa-users"></i>
+                                            </div>
+                                            <div class="chat-header-info">
+                                                <h3>
+                                                    {% if is_granted('ROLE_PARENT') %}
+                                                        Conversation avec l'équipe
+                                                    {% else %}
+                                                        ${data.conversation.parent.name} ${data.conversation.parent.lastname}
+                                                    {% endif %}
+                                                </h3>
+                                                <small>
+                                                    {% if is_granted('ROLE_PARENT') %}
+                                                        Tous les éducateurs et l'administrateur
+                                                    {% else %}
+                                                        Parent
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="chat-messages" id="chat-messages"></div>
+                                        <div class="chat-input">
+                                            <input type="text" id="message-input" placeholder="Écrivez votre message...">
+                                            <button id="send-button">
+                                                <i class="fa-solid fa-paper-plane"></i>
+                                                Envoyer
+                                            </button>
+                                            {% if is_granted('ROLE_PARENT') %}
+                                                <button id="absence-button" title="Signaler une absence">
+                                                    <i class="fa-solid fa-calendar-times"></i>
+                                                </button>
+                                                <button id="delay-button" title="Signaler un retard">
+                                                    <i class="fa-solid fa-clock"></i>
+                                                </button>
+                                                <button id="extra-hours-button" title="Demander des heures supplémentaires">
+                                                    <i class="fa-solid fa-calendar-plus"></i>
+                                                </button>
+                                            {% endif %}
+                                            {% if is_granted('ROLE_PARENT') or is_granted('ROLE_ADMIN') %}
+                                                <button id="attachment-button" title="Joindre un fichier">
+                                                    <i class="fa-solid fa-paperclip"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    `;
+
+                                    // Initialiser les gestionnaires de messages
+                                    initializeMessageHandlers();
+
+                                    // Ajouter le message à l'état global
+                                    const newMessage = {
+                                        id: data.id,
+                                        content: data.content,
+                                        sender: data.sender,
+                                        createdAt: data.createdAt,
+                                        isMine: true,
+                                        isRead: false
+                                    };
+                                    window.chatState.messages = [newMessage];
+
+                                    // Afficher le message
+                                    displayMessages(window.chatState.messages);
+
+                                    // Démarrer le polling
+                                    const chatMessages = document.getElementById('chat-messages');
+                                    if (chatMessages) {
+                                        startPolling(chatMessages);
+                                    }
+                                }
+
+                                // Réinitialiser le champ de message
+                                messageInput.value = '';
+                                messageInput.disabled = false;
+                                messageInput.focus();
+                                sendButton.disabled = false;
+                                return;
+                            }
+
+                            // Pour une conversation existante
+                            const newMessage = {
+                                id: data.id,
+                                content: data.content,
+                                sender: data.sender,
+                                createdAt: data.createdAt,
+                                isMine: true,
+                                isRead: false
+                            };
+                            window.chatState.messages.push(newMessage);
+
+                            // Réafficher tous les messages
+                            displayMessages(window.chatState.messages);
+
+                            // Réinitialiser le champ de message
+                            messageInput.value = '';
+                            messageInput.disabled = false;
+                            messageInput.focus();
+                            sendButton.disabled = false;
+
+                            // Mettre à jour la liste des conversations
+                            updateConversationList(data);
+                        })
+                        .catch(error => {
+                            console.error('Erreur complète:', error);
+                            messageInput.disabled = false;
+                            sendButton.disabled = false;
+                            alert('Erreur lors de l\'envoi du message : ' + error.message);
+                        });
+                    };
+
+                    // Attacher les gestionnaires d'événements
+                    sendButton.onclick = (e) => {
+                        console.log('Clic sur le bouton d\'envoi');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        sendMessage();
+                    };
+
+                    messageInput.onkeypress = (e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            console.log('Touche Entrée pressée');
+                            e.preventDefault();
+                            e.stopPropagation();
+                            sendMessage();
+                        }
+                    };
+                } else {
+                    console.error('Éléments manquants:', {
+                        messageInput: !!messageInput,
+                        sendButton: !!sendButton,
+                        chatMessages: !!chatMessages
+                    });
+                }
+
+                // Démarrer le polling seulement si on a une conversation active
+                if (chatMessages && window.chatState.currentConversationId) {
+                    startPolling(chatMessages);
+                }
+            }
+
+            // Fonction pour démarrer le polling des messages
+            function startPolling(chatMessages) {
+                if (window.chatState.pollingInterval) {
+                    clearInterval(window.chatState.pollingInterval);
+                }
+
+                let isPolling = true;
+                let isFirstPoll = true;
+
+                const pollMessages = () => {
+                    if (!isPolling) return;
+
+                    const conversationId = window.chatState.currentConversationId;
+                    if (!conversationId) {
+                        setTimeout(pollMessages, 5000);
+                        return;
+                    }
+
+                    console.log('Polling messages pour la conversation:', conversationId, 'dernier message:', window.chatState.lastPollTime);
+
+                    fetch(`{{ path('app_messages_index') }}?conversation=${conversationId}&last_message=${window.chatState.lastPollTime || ''}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+
+                        console.log('Nouveaux messages reçus:', data.messages);
+
+                        if (data.messages && data.messages.length > 0) {
+                            // Si c'est le premier poll, remplacer tous les messages
+                            if (isFirstPoll) {
+                                console.log('Premier poll - remplacement des messages');
+                                window.chatState.messages = data.messages;
+                                isFirstPoll = false;
+                            } else {
+                                // Sinon, ajouter uniquement les nouveaux messages
+                                let hasNewMessages = false;
+                                data.messages.forEach(newMessage => {
+                                    if (!window.chatState.messages.some(m => m.id === newMessage.id)) {
+                                        console.log('Ajout d\'un nouveau message:', newMessage);
+                                        window.chatState.messages.push(newMessage);
+                                        hasNewMessages = true;
+                                    }
+                                });
+
+                                if (!hasNewMessages) {
+                                    console.log('Aucun nouveau message à ajouter');
+                                    return;
+                                }
+                            }
+
+                            // Réafficher tous les messages
+                            displayMessages(window.chatState.messages);
+
+                            // Mettre à jour lastPollTime avec le dernier message
+                            const lastMessage = data.messages[data.messages.length - 1];
+                            window.chatState.lastPollTime = lastMessage.createdAt;
+                            console.log('Mise à jour du lastPollTime:', window.chatState.lastPollTime);
+
+                            // Mettre à jour le compteur de messages non lus
+                            updateUnreadCount();
+                        } else {
+                            console.log('Aucun nouveau message');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur polling messages:', error);
+                    });
+                };
+
+                // Démarrer le polling immédiatement
+                pollMessages();
+
+                // Configurer l'intervalle de polling
+                window.chatState.pollingInterval = setInterval(pollMessages, 5000);
+
+                // Gérer la visibilité de la page
+                document.addEventListener('visibilitychange', () => {
+                    isPolling = !document.hidden;
+                    if (isPolling) {
+                        pollMessages();
+                    }
+                });
+            }
+
+            // Fonction pour arrêter le polling
+            function stopPolling() {
+                if (window.chatState.pollingInterval) {
+                    clearInterval(window.chatState.pollingInterval);
+                    window.chatState.pollingInterval = null;
+                }
+            }
+
+            // Initialiser les gestionnaires au chargement de la page
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('Page des messages chargée, initialisation...');
+                
+                // Mettre à jour le compteur de messages non lus
+                updateUnreadCount();
+                
+                // Initialiser les gestionnaires de conversations
+                initializeConversationHandlers();
+
+                // Charger la conversation initiale si spécifiée dans l'URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const initialConversationId = urlParams.get('conversation');
+                
+                // Si on est parent et qu'il n'y a pas de conversation, on affiche l'interface pour démarrer une nouvelle conversation
+                {% if is_granted('ROLE_PARENT') %}
+                    if (!initialConversationId || initialConversationId === 'undefined') {
+                        console.log('Mode parent - interface pour nouvelle conversation');
+                        const chatMain = document.querySelector('.chat-main');
+                        if (chatMain) {
+                            chatMain.innerHTML = `
+                                <div class="no-conversation">
+                                    <i class="fa-regular fa-comments"></i>
+                                    <p>Commencez une conversation avec l'équipe</p>
+                                    <small>Envoyez votre premier message pour démarrer la discussion</small>
+                                    
+                                    <div class="chat-input">
+                                        <input type="text" id="message-input" placeholder="Écrivez votre message...">
+                                        <button id="send-button">
+                                            <i class="fa-solid fa-paper-plane"></i>
+                                            Envoyer
+                                        </button>
+                                        {% if is_granted('ROLE_PARENT') %}
+                                            <button id="absence-button" title="Signaler une absence">
+                                                <i class="fa-solid fa-calendar-times"></i>
+                                            </button>
+                                            <button id="delay-button" title="Signaler un retard">
+                                                <i class="fa-solid fa-clock"></i>
+                                            </button>
+                                            <button id="extra-hours-button" title="Demander des heures supplémentaires">
+                                                <i class="fa-solid fa-calendar-plus"></i>
+                                            </button>
+                                        {% endif %}
+                                        {% if is_granted('ROLE_PARENT') or is_granted('ROLE_ADMIN') %}
+                                            <button id="attachment-button" title="Joindre un fichier">
+                                                <i class="fa-solid fa-paperclip"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            `;
+                            // Nettoyer l'URL
+                            const url = new URL(window.location.href);
+                            url.searchParams.delete('conversation');
+                            window.history.replaceState({}, '', url);
+                            // Initialiser les gestionnaires de messages pour la nouvelle conversation
+                            initializeMessageHandlers();
+                        }
+                    } else {
+                        // Si on a un ID de conversation valide, on la charge
+                        console.log('Chargement de la conversation existante:', initialConversationId);
+                        loadConversation(initialConversationId);
+                    }
+                {% else %}
+                    // Pour les admin/éducateurs
+                    if (initialConversationId && initialConversationId !== 'undefined') {
+                        console.log('Chargement de la conversation:', initialConversationId);
+                        const initialConversation = document.querySelector(`[data-conversation-id="${initialConversationId}"]`);
+                        if (initialConversation) {
+                            initialConversation.click();
+                        } else {
+                            console.log('Conversation non trouvée dans la liste');
+                            const chatMain = document.querySelector('.chat-main');
+                            if (chatMain) {
+                                chatMain.innerHTML = `
+                                    <div class="no-conversation">
+                                        <i class="fa-solid fa-exclamation-circle"></i>
+                                        <p>Conversation non trouvée</p>
+                                        <small>Veuillez sélectionner une conversation valide dans la liste</small>
+                                    </div>
+                                `;
+                            }
+                        }
+                    } else {
+                        // Nettoyer l'URL si l'ID de conversation est undefined
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('conversation');
+                        window.history.replaceState({}, '', url);
+                        console.log('URL nettoyée - sélectionnez une conversation');
+                    }
+                {% endif %}
+            });
+
+            // Arrêter le polling quand on quitte la page
+            window.addEventListener('beforeunload', function() {
+                stopPolling();
+            });
+
+            // Réinitialiser les gestionnaires après chaque navigation Turbo
+            document.addEventListener('turbo:render', function() {
+                if (window.location.pathname.includes('/messages')) {
+                    initializeConversationHandlers();
+                } else {
+                    // Si on n'est plus sur la page des messages, arrêter le polling
+                    stopPolling();
+                }
+            });
+        }
+    </script>
+{% endblock %} 

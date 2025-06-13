@@ -1,0 +1,343 @@
+@import url("https://fonts.googleapis.com/css2?family=Grand+Hotel&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+* {
+  padding: 0;
+  margin: 0;
+  color: #333;
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+  background-color: #fffcef;
+}
+
+a {
+  text-decoration: none;
+}
+
+header {
+  position: relative;
+}
+header h1 {
+  padding: 2rem 0;
+  text-align: center;
+  font-family: "Grand Hotel", cursive;
+  font-size: 5rem;
+  color: #a74800;
+}
+header img {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#home-header {
+  background-color: #a8d7e6;
+}
+#home-header img {
+  bottom: -160%;
+}
+
+main h2 {
+  font-size: 3rem;
+}
+
+#home-main h2 {
+  color: #9fe2ad;
+  text-align: center;
+  margin-top: 20rem;
+}
+#home-main #container-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  max-width: 35rem;
+  margin: 0 auto;
+  padding: 2rem;
+}
+#home-main .card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg, #fff);
+  border-radius: 5px;
+  text-align: center;
+  text-decoration: none;
+  padding: 2rem 1rem;
+  transition: transform 0.2s;
+}
+#home-main .card:hover {
+  transform: scale(1.05);
+}
+#home-main .card:hover span {
+  color: #333;
+}
+#home-main .card:hover i {
+  text-shadow: 0 0 4px var(--bg, #fff);
+}
+#home-main .card i {
+  color: var(--bg, #fff);
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+#home-main .card span {
+  font-size: 2rem;
+  font-weight: 500;
+  color: rgba(51, 51, 51, 0.4039215686);
+}
+#home-main .isolate {
+  padding: 2rem;
+  border: rgb(248, 212, 51) 1px solid;
+  margin: 2rem auto;
+  max-width: 20rem;
+  height: 2rem;
+}
+#home-main .isolate i {
+  color: var(--bg, #fff);
+  font-size: 1.5rem;
+}
+#home-main .isolate span {
+  font-size: 1rem;
+}
+
+body#log {
+  background-color: #A8D7E6;
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+body#log header h1 {
+  font-size: 15rem;
+}
+body#log svg {
+  z-index: -2;
+  position: absolute;
+  bottom: 5%;
+}
+body#log #yellow {
+  position: absolute;
+  z-index: -1;
+  bottom: 0;
+  width: 100%;
+  height: 50%;
+  background: linear-gradient(to top, #FFEA8D 55%, #B8E6C1 45%);
+}
+body#log #cloud1 {
+  position: absolute;
+  top: 10%;
+  left: 5%;
+  z-index: -1;
+}
+body#log #cloud1 svg {
+  width: 20rem;
+  height: auto;
+}
+body#log #cloud2 {
+  position: absolute;
+  z-index: -1;
+  right: 35%;
+  top: 18%;
+}
+body#log #cloud2 svg {
+  width: 20rem;
+  height: auto;
+}
+body#log #foxy_log {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 20%;
+}
+body#log #foxy_log img {
+  width: 35rem;
+  height: auto;
+}
+body#log form {
+  position: absolute;
+  top: 62%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #FFF3CC;
+  border-radius: 10px;
+  width: 80%;
+  padding: 4rem;
+  display: flex;
+  flex-direction: column;
+}
+body#log form label {
+  font-size: 4rem;
+  color: #ECA36C;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin: 1rem 0;
+}
+body#log form input {
+  font-size: 2rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 5px;
+  border: none;
+  background-color: #FEE5AE;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+body#log form button {
+  font-size: 2rem;
+  padding: 1rem;
+  margin: 2rem 0;
+  border-radius: 10px;
+  border: none;
+  color: white;
+  background-color: #ECA36C;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#planning-header {
+  background-color: #ECA36C;
+}
+#planning-header h1 {
+  font-size: 8rem;
+}
+#planning-header img {
+  width: 20rem;
+  top: 65%;
+}
+
+#planning-main h2 {
+  color: rgba(236, 163, 108, 0.568627451);
+  text-align: center;
+  margin-top: 25rem;
+}
+#planning-main #button-plan-admin {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  max-width: 35rem;
+  margin: 0 auto;
+  padding: 2rem;
+}
+#planning-main #button-plan-admin button {
+  font-size: 2rem;
+  font-weight: 600;
+  background-color: var(--bg, #fff);
+  border: none;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+#planning-main #button-plan-admin button:hover, #planning-main #button-plan-admin button:active {
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  body#log header h1 {
+    font-size: 4rem;
+  }
+  body#log svg.green {
+    bottom: 5%;
+  }
+  body#log div#yellow {
+    position: absolute;
+    z-index: -1;
+    bottom: 0;
+    width: 100%;
+    height: 20rem;
+  }
+  body#log #cloud1 {
+    top: 15%;
+    left: 10%;
+    z-index: -1;
+  }
+  body#log #cloud1 svg {
+    width: 10rem;
+  }
+  body#log #cloud2 {
+    right: 30%;
+    top: 20%;
+  }
+  body#log #cloud2 svg {
+    width: 10rem;
+    height: auto;
+  }
+  body#log #foxy_log {
+    left: 50%;
+    top: 18%;
+  }
+  body#log #foxy_log img {
+    width: 10rem;
+  }
+  body#log form {
+    top: 65%;
+    left: 50%;
+    width: 30rem;
+    padding: 2rem;
+  }
+  body#log form label {
+    font-size: 1rem;
+    margin: 0.5rem 0;
+  }
+  body#log form input {
+    font-size: 1rem;
+    padding: 0.5rem;
+  }
+  body#log form button {
+    font-size: 1rem;
+    padding: 1rem;
+    margin: 0.5rem 0;
+  }
+}
+@media (min-width: 1440px) {
+  body#log header h1 {
+    font-size: 4rem;
+  }
+  body#log svg.green {
+    bottom: 5%;
+  }
+  body#log div#yellow {
+    position: absolute;
+    z-index: -1;
+    bottom: 0;
+    width: 100%;
+    height: 20rem;
+  }
+  body#log #cloud1 {
+    top: 15%;
+    left: 10%;
+    z-index: -1;
+  }
+  body#log #cloud1 svg {
+    width: 10rem;
+  }
+  body#log #cloud2 {
+    right: 30%;
+    top: 20%;
+  }
+  body#log #cloud2 svg {
+    width: 10rem;
+    height: auto;
+  }
+  body#log #foxy_log {
+    left: 50%;
+    top: 20%;
+  }
+  body#log #foxy_log img {
+    width: 12rem;
+  }
+  body#log form {
+    top: 65%;
+    left: 50%;
+    width: 30rem;
+    padding: 2rem;
+  }
+  body#log form label {
+    font-size: 1rem;
+    margin: 0.5rem 0;
+  }
+  body#log form input {
+    font-size: 1rem;
+    padding: 0.5rem;
+  }
+  body#log form button {
+    font-size: 1rem;
+    padding: 1rem;
+    margin: 0.5rem 0;
+  }
+}/*# sourceMappingURL=app.css.map */

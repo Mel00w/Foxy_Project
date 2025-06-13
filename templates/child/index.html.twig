@@ -1,0 +1,89 @@
+{% extends 'base.html.twig' %}
+
+{% block idheader %}id="children-header"{% endblock %}
+{% block title %}Enfants | Foxy{% endblock %}
+{% block imgheader %}
+    <img src="{{ asset('img/foxy_all.webp') }}" alt="Header Image">
+{% endblock %}
+{% block idmain %}id="children-main"{% endblock %}
+
+{% block body %}
+    {% if app.user and 'ROLE_ADMIN' in app.user.roles %}
+        <div>
+            <h2>Enfants</h2>
+        </div>
+
+        <div class="action-buttons">
+            <a href="{{ path('app_children_new') }}" class="new-button">
+                <button style="--bg:#4CAF50" title="Ajouter un enfant">
+                    <i class="fa-solid fa-plus"></i> Nouvel enfant
+                </button>
+            </a>
+        </div>
+
+        <div class="search-container">
+            <form method="get" action="{{ path('app_children_index') }}" class="search-form">
+                <div class="search-box">
+                    <input type="text" name="search" value="{{ search }}" placeholder="Rechercher un enfant..." class="search-input">
+                    <button type="submit" class="search-button">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="children-grid">
+            {% for child in children %}
+                <div class="child-card">
+                    {% if child.picture %}
+                        <img src="{{ asset('uploads/children/' ~ child.picture) }}" alt="Photo de {{ child.name }}" class="child-picture">
+                    {% else %}
+                        <div class="child-picture-placeholder">
+                            <i class="fa-solid fa-child"></i>
+                        </div>
+                    {% endif %}
+                    <div class="child-info">
+                        <h3>{{ child.name }} {{ child.lastname }}</h3>
+                        <p>Né(e) le : {{ child.birthday|date('d/m/Y') }}</p>
+                        {% if child.team %}
+                            <p>Équipe : {{ child.team.name }}</p>
+                        {% endif %}
+                        <div class="child-actions">
+                            <a href="{{ path('app_children_show', {'id': child.id}) }}" class="action-button" title="Voir les détails">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                            <a href="{{ path('app_children_edit', {'id': child.id}) }}" class="action-button" title="Modifier">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <p class="no-results">Aucun enfant trouvé.</p>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="children-grid">
+            {% for child in children %}
+                <div class="child-card">
+                    {% if child.picture %}
+                        <img src="{{ asset('uploads/children/' ~ child.picture) }}" alt="Photo de {{ child.name }}" class="child-picture">
+                    {% else %}
+                        <div class="child-picture-placeholder">
+                            <i class="fa-solid fa-child"></i>
+                        </div>
+                    {% endif %}
+                    <div class="child-info">
+                        <h3>{{ child.name }} {{ child.lastname }}</h3>
+                        <p>Né(e) le : {{ child.birthday|date('d/m/Y') }}</p>
+                        {% if child.team %}
+                            <p>Équipe : {{ child.team.name }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <p class="no-results">Aucun enfant trouvé.</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}
